@@ -1,4 +1,4 @@
-'use client'
+ 'use client'
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { VENUES } from '@/lib/constants'
 import { getEvents } from '@/lib/events-store'
 import type { Event } from '@/types'
-
+import { PageHeader } from '@/components/ui/PageHeader'
 
 const PROVEEDOR_ID = 'p1'
 
@@ -21,10 +21,8 @@ export default function ProveedorDashboardPage() {
   }, [])
 
   return (
-    <div>
-      <h1 className="mb-6 text-xl font-semibold text-(--text)">
-        Mis eventos asignados
-      </h1>
+    <div className="mx-auto max-w-[1200px]">
+      <PageHeader title="Mis eventos asignados" />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {eventsForProvider.map((event) => (
           <Link
