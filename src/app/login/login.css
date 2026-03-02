@@ -1,0 +1,242 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-container {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(var(--blur));
+  border-radius: 28px;
+  padding: 48px 32px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--stroke);
+}
+
+/* Logo */
+
+.logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logo-icon {
+  width: 160px;
+  height: 80px;
+  border-radius: 24px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.logo-subtitle {
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: -0.01em;
+}
+
+.powered-by {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Formulario */
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  display: block;
+  letter-spacing: -0.01em;
+}
+
+.form-input {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 18px;
+  font-size: 15px;
+  font-family: inherit;
+  transition: all 0.18s ease;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(var(--blur));
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.form-input::placeholder {
+  color: var(--muted);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Botón principal */
+
+.btn-login {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 18px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  box-shadow: 0 12px 30px rgba(102, 126, 234, 0.3);
+  letter-spacing: -0.01em;
+}
+
+.btn-login:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(102, 126, 234, 0.4);
+}
+
+.btn-login:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-login:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Alertas */
+
+.alert {
+  padding: 14px 18px;
+  border-radius: 18px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  display: none;
+  border: 1px solid;
+  backdrop-filter: blur(var(--blur));
+  letter-spacing: -0.01em;
+  font-weight: 500;
+}
+
+.alert-success {
+  background: rgba(52, 199, 89, 0.12);
+  color: #1a7f37;
+  border-color: rgba(52, 199, 89, 0.25);
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #c41d33;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.alert-visible {
+  display: block;
+}
+
+/* Caja credenciales demo */
+
+.helper-box {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(var(--blur));
+  border-radius: 18px;
+  text-align: center;
+  border: 1px solid var(--stroke);
+}
+
+.helper-title {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.helper-creds {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+  font-family: var(--font-mono-ui);
+}
+
+/* Bloque “Última actualización” */
+
+.update-info {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(102, 126, 234, 0.06);
+  backdrop-filter: blur(var(--blur));
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid rgba(102, 126, 234, 0.15);
+}
+
+.update-text {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+
+.update-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Footer login */
+
+.login-footer {
+  text-align: center;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--stroke);
+}
+
+.footer-text {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: -0.01em;
+}
+
+.footer-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.18s ease;
+}
+
+.footer-link:hover {
+  opacity: 0.7;
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    padding: 32px 24px;
+  }
+
+  .logo-icon {
+    width: 64px;
+    height: 64px;
+  }
+}
+
