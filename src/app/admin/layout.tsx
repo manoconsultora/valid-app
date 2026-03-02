@@ -1,10 +1,11 @@
-'use client'
+ 'use client'
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { clearSession, getSession } from '@/lib/session'
+import { NavbarLogo } from '@/components/ui/NavbarLogo'
 
 function getInitials(name: string): string {
   return name
@@ -80,13 +81,7 @@ export default function AdminLayout({
         }}
       >
         <div className="flex items-center gap-6">
-          <Link
-            className="text-lg font-semibold tracking-tight"
-            href="/admin"
-            style={{ color: 'var(--text)' }}
-          >
-            VALID
-          </Link>
+          <NavbarLogo href="/admin" />
           <nav className="flex gap-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
             <Link className="hover:opacity-80" href="/admin">
               Dashboard

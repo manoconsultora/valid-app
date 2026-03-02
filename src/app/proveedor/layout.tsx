@@ -1,10 +1,11 @@
-'use client'
+ 'use client'
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 import { clearSession, getSession } from '@/lib/session'
+import { NavbarLogo } from '@/components/ui/NavbarLogo'
 
 export default function ProveedorLayout({
   children,
@@ -54,12 +55,7 @@ export default function ProveedorLayout({
         }}
       >
         <div className="flex items-center gap-6">
-          <Link
-            className="text-lg font-semibold text-(--text)"
-            href="/proveedor"
-          >
-            VALID
-          </Link>
+          <NavbarLogo href="/proveedor" />
           <span className="text-sm text-(--muted)">Proveedor</span>
         </div>
         <button
