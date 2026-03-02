@@ -1,10 +1,50 @@
-'use client'
+ 'use client'
 
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { loginDemo } from '@/lib/auth-demo'
 import { setSession } from '@/lib/session'
+import './login.css'
+
+type FormFieldProps = {
+  id: string
+  label: string
+  type: 'email' | 'password'
+  placeholder: string
+  autoComplete: string
+  value: string
+  onChange: (value: string) => void
+}
+
+function FormField({
+  id,
+  label,
+  type,
+  placeholder,
+  autoComplete,
+  value,
+  onChange,
+}: FormFieldProps) {
+  return (
+    <div className="form-group">
+      <label className="form-label" htmlFor={id}>
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        className="form-input"
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        required
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  )
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -15,98 +55,120 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    const user = loginDemo(email.trim(), password)
+    const user = loginDemo(email.trim(), password.trim())
     if (!user) {
-      setError('Email o contraseña incorrectos.')
+      setError('❌ Email o contraseña incorrectos')
       return
     }
     setSession(user)
-    if (user.role === 'admin') {router.push('/admin')}
-    else {router.push('/proveedor')}
+    if (user.role === 'admin') {
+      router.push('/admin')
+    } else {
+      router.push('/proveedor')
+    }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <main
-        className="w-full max-w-md rounded-lg border border-(--stroke) p-8 shadow-(--shadow-soft)"
-        style={{
-          backdropFilter: 'blur(var(--blur))',
-          background: 'var(--surface-2)',
-        }}
-      >
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-(--text)">
-            VALID
-          </h1>
-          <p className="mt-1 text-sm text-(--muted)">
-            Sistema de Validación Documental · powered by MANOBOT
-          </p>
-        </div>
+    <div className="login-page">
+      <main className="login-container">
+        <div className="logo">
+          <div className="logo-icon">
+            <Image
+              src="/VALID_logo_app.png"
+              alt="VALID app"
+              width={160}
+              height={80}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              }}
+              priority
+            />
+          </div>
+          <div className="logo-icon">
+            <Image
+              src="/logo.png"
+              alt="VALID"
+              width={160}
+              height={80}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              }}
+            />
+          </div>
 
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <div>
-            <label
-              className="mb-1 block text-sm font-medium text-(--text)"
-              htmlFor="email"
-            >
-              Email
-            </label>
-            <input
-              autoComplete="email"
-              className="w-full rounded-(--radius) border border-(--stroke) bg-white/80 px-4 py-3 text-(--text) placeholder:text-(--muted) focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              id="email"
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              type="email"
-              value={email}
-            />
-          </div>
-          <div>
-            <label
-              className="mb-1 block text-sm font-medium text-(--text)"
-              htmlFor="password"
-            >
-              Contraseña
-            </label>
-            <input
-              autoComplete="current-password"
-              className="w-full rounded-(--radius) border border-(--stroke) bg-white/80 px-4 py-3 text-(--text) placeholder:text-(--muted) focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              id="password"
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              type="password"
-              value={password}
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-rejected" role="alert">
-              {error}
-            </p>
-          )}
-          <button
-            className="mt-2 rounded-(--radius) bg-accent px-4 py-3 font-semibold text-white transition-opacity hover:opacity-90"
-            type="submit"
-          >
-            Ingresar
-          </button>
-        </form>
+          <div className="logo-subtitle">Sistema de Validación Documental</div>
+          <div className="powered-by">powered by MANOBOT</div>
+        </div>
 
         <div
-          className="mt-6 rounded-(--radius) border border-(--stroke) bg-white/60 p-4 text-sm text-(--muted)"
-          style={{ backdropFilter: 'blur(var(--blur))' }}
+          className={[
+            'alert',
+            error ? 'alert-error alert-visible' : '',
+          ].join(' ')}
+          role={error ? 'alert' : undefined}
         >
-          <p className="font-medium text-(--text)">Credenciales demo</p>
-          <p className="mt-1 font-mono text-xs">
-            Admin: admin@productora.com / admin123
-          </p>
-          <p className="mt-0.5 font-mono text-xs">
-            Proveedor: proveedor@empresa.com / prov123
-          </p>
+          {error}
         </div>
 
-        <p className="mt-6 text-center text-xs text-(--muted)">
-          ¿Problemas para ingresar? Contactar soporte.
-        </p>
+        <form onSubmit={handleSubmit}>
+          <FormField
+            id="email"
+            label="Email"
+            type="email"
+            placeholder="tu@email.com"
+            autoComplete="email"
+            value={email}
+            onChange={setEmail}
+          />
+
+          <FormField
+            id="password"
+            label="Contraseña"
+            type="password"
+            placeholder="••••••••"
+            autoComplete="current-password"
+            value={password}
+            onChange={setPassword}
+          />
+
+          <button type="submit" className="btn-login">
+            Ingresar
+          </button>
+
+          <div className="helper-box">
+            <p className="helper-title">Credenciales Demo</p>
+            <p className="helper-creds">
+              Admin: admin@productora.com / admin123
+              <br />
+              Proveedor: proveedor@empresa.com / prov123
+            </p>
+          </div>
+
+          <div className="update-info">
+            <p className="update-text">
+              Última Actualización: <strong>13/01/2026 - 15:30 PM</strong>
+              <br />
+              Deploy: <strong>deploy@manobot.com</strong>
+              <br />
+              <span style={{ fontSize: 9, opacity: 0.7 }}>
+                MANO CONSULTORA - Digital Strategy for Growth
+              </span>
+            </p>
+          </div>
+        </form>
+
+        <div className="login-footer">
+          <p className="footer-text">
+            ¿Problemas para ingresar?{' '}
+            <a href="mailto:soporte@manobot.com" className="footer-link">
+              Contactar soporte
+            </a>
+          </p>
+        </div>
       </main>
     </div>
   )
