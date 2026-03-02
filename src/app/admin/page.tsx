@@ -1,4 +1,4 @@
-'use client'
+ 'use client'
 
 import Image from 'next/image'
 import Link from 'next/link'
@@ -9,6 +9,8 @@ import type { Event } from '@/types'
 import { getEvents } from '@/lib/events-store'
 import { VENUES } from '@/lib/constants'
 import { getSession } from '@/lib/session'
+import { MetricCard } from '@/components/ui/MetricCard'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 export default function AdminDashboardPage() {
   const [events, setEvents] = useState<Event[]>([])
@@ -44,122 +46,49 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="mx-auto max-w-[1400px]">
-      {/* Header */}
-      <div className="mb-10 flex justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text)' }}>
-            Hola, {userName || 'Admin'} 👋
-          </h1>
-          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            Bienvenida al panel de control
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={`Hola, ${userName || 'Admin'} 👋`}
+        subtitle="Bienvenida al panel de control"
+      />
 
       {/* Stats */}
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div
-          className="rounded-2xl border p-4"
-          style={{
-            background: 'var(--surface)',
-            borderColor: 'var(--border)',
-            boxShadow: 'var(--shadow)',
-          }}
-        >
-          <div
-            className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg text-lg"
-            style={{ background: '#f5f3ff' }}
-          >
-            📋
-          </div>
-          <div className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text)' }}>
-            {companiesWithDocs}
-            <span className="text-xl" style={{ color: 'var(--text-secondary)' }}>
-              /{companiesTotal}
-            </span>
-          </div>
-          <div className="text-xs font-medium" style={{ color: 'var(--text)' }}>
-            Empresas con docs
-          </div>
-          <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-            {Math.round((companiesWithDocs / companiesTotal) * 100)}% completado
-          </div>
-        </div>
+        <MetricCard
+          icon="📋"
+          iconBg="#f5f3ff"
+          primary={String(companiesWithDocs)}
+          secondary={`/${companiesTotal}`}
+          label="Empresas con docs"
+          helper={`${Math.round((companiesWithDocs / companiesTotal) * 100)}% completado`}
+        />
 
-        <div
-          className="rounded-2xl border p-4"
-          style={{
-            background: 'var(--surface)',
-            borderColor: 'var(--border)',
-            boxShadow: 'var(--shadow)',
-          }}
-        >
-          <div
-            className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg text-lg"
-            style={{ background: '#fffbeb' }}
-          >
-            ⚠️
-          </div>
-          <div className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text)' }}>
-            3
-          </div>
-          <div className="text-xs font-medium" style={{ color: 'var(--text)' }}>
-            Empresas con errores
-          </div>
-          <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-            Requieren corrección
-          </div>
-        </div>
+        <MetricCard
+          icon="⚠️"
+          iconBg="#fffbeb"
+          primary="3"
+          label="Empresas con errores"
+          helper="Requieren corrección"
+        />
 
-        <div
-          className="rounded-2xl border p-4"
-          style={{
-            background: 'var(--surface)',
-            borderColor: 'var(--border)',
-            boxShadow: 'var(--shadow)',
-          }}
-        >
-          <div
-            className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg text-lg"
-            style={{ background: '#eff6ff' }}
-          >
-            👥
-          </div>
-          <div className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text)' }}>
-            {totalEmployees || 247}
-          </div>
-          <div className="text-xs font-medium" style={{ color: 'var(--text)' }}>
-            Total empleados
-          </div>
-          <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-            Según lista de ingreso
-          </div>
-        </div>
+        <MetricCard
+          icon="👥"
+          iconBg="#eff6ff"
+          primary={String(totalEmployees || 247)}
+          label="Total empleados"
+          helper="Según lista de ingreso"
+        />
 
-        <div
-          className="rounded-2xl border p-4"
-          style={{
-            background: 'var(--surface)',
-            borderColor: 'var(--border)',
-            boxShadow: 'var(--shadow)',
-          }}
-        >
-          <div
-            className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg text-lg"
-            style={{ background: '#f0fdf4' }}
-          >
-            ✓
-          </div>
-          <div className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text)' }}>
-            {validatedEmployees || 189}
-          </div>
-          <div className="text-xs font-medium" style={{ color: 'var(--text)' }}>
-            Empleados validados
-          </div>
-          <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-            {totalEmployees ? `${Math.round((validatedEmployees / totalEmployees) * 100)}% del total` : '76% del total'}
-          </div>
-        </div>
+        <MetricCard
+          icon="✓"
+          iconBg="#f0fdf4"
+          primary={String(validatedEmployees || 189)}
+          label="Empleados validados"
+          helper={
+            totalEmployees
+              ? `${Math.round((validatedEmployees / totalEmployees) * 100)}% del total`
+              : '76% del total'
+          }
+        />
       </div>
 
       {/* Gestión */}
