@@ -3,9 +3,7 @@ import type { Event } from '@/types'
 import { MOCK_PROVIDERS } from './mock-providers'
 
 /** Genera un array de N provider ids para demo (repite p1/p2). */
-function providerIds(n: number): string[] {
-  return Array.from({ length: n }, (_, i) => MOCK_PROVIDERS[i % MOCK_PROVIDERS.length].id)
-}
+const providerIds = (n: number): string[] => Array.from({ length: n }, (_, i) => MOCK_PROVIDERS[i % MOCK_PROVIDERS.length].id);
 
 /**
  * Eventos demo – coinciden con el diseño del dashboard (3 cards).

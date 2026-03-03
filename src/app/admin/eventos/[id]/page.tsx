@@ -12,13 +12,18 @@ import {
   MOCK_VALIDATION_NOMINA,
   MOCK_VALIDATION_NOMINA_STATS,
 } from '@/data/mock-event-detail'
-import { getEvents } from '@/lib/events-store'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { VENUES } from '@/lib/constants'
+import { getEvents } from '@/lib/events-store'
 import type { Event } from '@/types'
 
 function statusBadgeClass(status: Event['statusAdmin']) {
-  if (status === 'LIVE') return 'bg-[#ffe5e5] text-[var(--error)]'
-  if (status === 'VALIDACIÓN') return 'bg-[#fff3cd] text-[#856404]'
+  if (status === 'LIVE') {
+    return 'bg-[#ffe5e5] text-[var(--error)]'
+  }
+  if (status === 'VALIDACIÓN') {
+    return 'bg-[#fff3cd] text-[#856404]'
+  }
   return 'bg-[#e5e7ff] text-[var(--accent)]'
 }
 
@@ -37,9 +42,7 @@ export default function AdminEventoPage() {
     return () => clearTimeout(t)
   }, [id])
 
-  useEffect(() => {
-    if (event) document.title = `${event.name} - CREW`
-  }, [event])
+  useDocumentTitle(event ? `${event.name} - VALID` : 'Evento - VALID')
 
   if (!event) {
     return (
@@ -190,12 +193,12 @@ export default function AdminEventoPage() {
         <div className="grid gap-3">
           {MOCK_COMPANIES.map((company) => (
             <div
-              key={company.cuit}
               className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4 shadow-sm ${
                 company.status === 'error'
                   ? 'border-red-500 bg-[#fff5f5]'
                   : 'border-emerald-500 bg-[#f0fdf4]'
               }`}
+              key={company.cuit}
             >
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-semibold" style={{ color: 'var(--text)' }}>
@@ -259,8 +262,8 @@ export default function AdminEventoPage() {
             <ul className="space-y-2">
               {MOCK_VALIDATION_EMPRESAS.map((err, i) => (
                 <li
-                  key={i}
                   className="rounded-[10px] border border-red-200 bg-[#fff5f5] p-3 text-sm"
+                  key={i}
                 >
                   <strong className="mb-1 block text-red-700">{err.title}</strong>
                   <span className="text-[#1d1d1f]">{err.description}</span>
@@ -310,8 +313,8 @@ export default function AdminEventoPage() {
             <ul className="space-y-2">
               {MOCK_VALIDATION_NOMINA.map((err, i) => (
                 <li
-                  key={i}
                   className="rounded-[10px] border border-red-200 bg-[#fff5f5] p-3 text-sm"
+                  key={i}
                 >
                   <strong className="mb-1 block text-red-700">{err.title}</strong>
                   <span className="text-[#1d1d1f]">{err.description}</span>

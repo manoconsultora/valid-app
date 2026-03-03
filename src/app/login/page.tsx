@@ -15,36 +15,34 @@ type FormFieldProps = {
   placeholder: string
   autoComplete: string
   value: string
-  onChange: (value: string) => void
+  onChange: (_value: string) => void
 }
 
-function FormField({
+const FormField = ({
+  autoComplete,
   id,
   label,
-  type,
-  placeholder,
-  autoComplete,
-  value,
   onChange,
-}: FormFieldProps) {
-  return (
+  placeholder,
+  type,
+  value,
+}: FormFieldProps) => (
     <div className="form-group">
       <label className="form-label" htmlFor={id}>
         {label}
       </label>
       <input
-        id={id}
-        type={type}
-        className="form-input"
-        placeholder={placeholder}
         autoComplete={autoComplete}
-        required
-        value={value}
+        className="form-input"
+        id={id}
         onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required
+        type={type}
+        value={value}
       />
     </div>
-  )
-}
+  );
 
 export default function LoginPage() {
   const router = useRouter()
@@ -74,29 +72,29 @@ export default function LoginPage() {
         <div className="logo">
           <div className="logo-icon">
             <Image
-              src="/VALID_logo_app.png"
               alt="VALID app"
-              width={160}
               height={80}
+              priority
+              src="/VALID_logo_app.png"
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'contain',
               }}
-              priority
+              width={160}
             />
           </div>
           <div className="logo-icon">
             <Image
-              src="/logo.png"
               alt="VALID"
-              width={160}
               height={80}
+              src="/logo.png"
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'contain',
               }}
+              width={160}
             />
           </div>
 
@@ -116,26 +114,26 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit}>
           <FormField
+            autoComplete="email"
             id="email"
             label="Email"
-            type="email"
-            placeholder="tu@email.com"
-            autoComplete="email"
-            value={email}
             onChange={setEmail}
+            placeholder="tu@email.com"
+            type="email"
+            value={email}
           />
 
           <FormField
+            autoComplete="current-password"
             id="password"
             label="Contraseña"
-            type="password"
-            placeholder="••••••••"
-            autoComplete="current-password"
-            value={password}
             onChange={setPassword}
+            placeholder="••••••••"
+            type="password"
+            value={password}
           />
 
-          <button type="submit" className="btn-login">
+          <button className="btn-login" type="submit">
             Ingresar
           </button>
 
@@ -164,7 +162,7 @@ export default function LoginPage() {
         <div className="login-footer">
           <p className="footer-text">
             ¿Problemas para ingresar?{' '}
-            <a href="mailto:soporte@manobot.com" className="footer-link">
+            <a className="footer-link" href="mailto:soporte@manobot.com">
               Contactar soporte
             </a>
           </p>

@@ -8,8 +8,7 @@ interface PageHeaderProps {
  * Encabezado de página reutilizable para dashboards.
  * Se apoya en los tokens globales (var(--text), var(--text-secondary)).
  */
-export function PageHeader({ title, subtitle, rightSlot }: PageHeaderProps) {
-  return (
+export const PageHeader = ({ rightSlot, subtitle, title }: PageHeaderProps) => (
     <div className="mb-10 flex justify-between">
       <div>
         <h1
@@ -26,6 +25,5 @@ export function PageHeader({ title, subtitle, rightSlot }: PageHeaderProps) {
       </div>
       {rightSlot ? <div className="flex items-center gap-2">{rightSlot}</div> : null}
     </div>
-  )
-}
+  );
 

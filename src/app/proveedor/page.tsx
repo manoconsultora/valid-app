@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { PageHeader } from '@/components/ui/PageHeader'
 import { VENUES } from '@/lib/constants'
 import { getEvents } from '@/lib/events-store'
 import type { Event } from '@/types'
-import { PageHeader } from '@/components/ui/PageHeader'
 
 const PROVEEDOR_ID = 'p1'
 

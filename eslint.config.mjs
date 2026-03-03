@@ -23,7 +23,7 @@ const baseRules = {
   'no-multi-assign': 'error',
   'no-param-reassign': 'warn',
   'no-return-assign': 'warn',
-  'no-unused-vars': ['error', { ignoreRestSiblings: true }],
+  'no-unused-vars': ['error', { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
   'no-use-before-define': 'error',
   'no-var': 'error',
   'object-shorthand': 'warn',
@@ -43,7 +43,7 @@ const baseRules = {
 
 const nextTsRules = {
   '@typescript-eslint/no-shadow': 'error',
-  '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
+  '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
   'no-shadow': 'off',
   'import/order': [
     'warn',

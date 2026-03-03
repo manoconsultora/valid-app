@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { VENUES } from '@/lib/constants'
 import { PROVIDER_CATEGORIES } from '@/lib/constants'
 import { addEvent } from '@/lib/events-store'
@@ -15,7 +16,7 @@ const formCardClass =
 
 export default function CrearEventoPage() {
   const router = useRouter()
-  const [providers, setProviders] = useState<Provider[]>([])
+  const [providers] = useState<Provider[]>(() => getProviders())
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
   const [venueId, setVenueId] = useState('')
@@ -26,54 +27,46 @@ export default function CrearEventoPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [sending, setSending] = useState(false)
 
-  useEffect(() => {
-    const t = setTimeout(() => setProviders(getProviders()), 0)
-    return () => clearTimeout(t)
-  }, [])
-
-  useEffect(() => {
-    document.title = 'Crear Evento - CREW'
-  }, [])
+  useDocumentTitle('Crear Evento - VALID')
 
   const venuesByCity = {
     CABA: VENUES.filter((v) => v.city === 'CABA'),
     Córdoba: VENUES.filter((v) => v.city === 'Córdoba'),
   }
 
-  const toggleProvider = (id: string) => {
+  const toggleProvider = (id: string) =>
     setProviderIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     )
-  }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSending(true)
-    setTimeout(() => {
-      addEvent({
-        date,
-        description,
-        name,
-        protocolNotes: protocolNotes || undefined,
-        providerIds,
-        statusAdmin: 'ARMADO',
-        timeRange,
-        venueId,
-      })
-      setSending(false)
-      setShowSuccess(true)
-    }, 1800)
-  }
+  const handleSubmit = (e: React.FormEvent) => (
+    e.preventDefault(),
+    setSending(true),
+    setTimeout(
+      () =>
+        (addEvent({
+          date,
+          description,
+          name,
+          protocolNotes: protocolNotes || undefined,
+          providerIds,
+          statusAdmin: 'ARMADO',
+          timeRange,
+          venueId,
+        }),
+        setSending(false),
+        setShowSuccess(true)),
+      1800
+    )
+  )
 
-  const handleGoDashboard = () => {
-    router.push('/admin')
-  }
+  const handleGoDashboard = () => router.push('/admin')
 
   if (showSuccess) {
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(8px)' }}
+        style={{ backdropFilter: 'blur(8px)', background: 'rgba(0,0,0,0.2)' }}
       >
         <div
           className="w-full max-w-md rounded-[24px] p-12 text-center shadow-[var(--shadow-lg)]"
@@ -327,7 +320,7 @@ export default function CrearEventoPage() {
       {sending && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)' }}
+          style={{ backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.9)' }}
         >
           <div className="w-full max-w-sm rounded-[24px] border border-[var(--border)] bg-white p-8 shadow-lg">
             <p className="text-center text-sm font-medium" style={{ color: 'var(--text)' }}>
