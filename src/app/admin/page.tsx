@@ -36,7 +36,7 @@ export default function AdminDashboardPage() {
 
   const statusClass = (status: Event['statusAdmin']) =>
     ({
-      ARMADO: 'bg-[var(--accent)]',
+      ARMADO: 'bg-accent',
       LIVE: 'bg-[var(--rejected)]',
       VALIDACIÓN: 'bg-[var(--warning)]',
     }[status])

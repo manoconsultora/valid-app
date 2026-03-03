@@ -12,6 +12,16 @@ import type { Event } from '@/types'
 
 const PROVEEDOR_ID = 'p1'
 
+function statusProviderBg(status: Event['statusProvider'] | undefined): string {
+  if (status === 'Documentación Aprobada') {
+    return 'var(--approved)'
+  }
+  if (status === 'Documentación Rechazada') {
+    return 'var(--rejected)'
+  }
+  return 'var(--pending)'
+}
+
 export default function ProveedorEventoPage() {
   const params = useParams()
   const id = params.id as string
@@ -21,13 +31,21 @@ export default function ProveedorEventoPage() {
   const [modalWorker, setModalWorker] = useState(false)
   const [workerRole, setWorkerRole] = useState('')
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const ev = getEvents().find((e) => e.id === id && e.providerIds.includes(PROVEEDOR_ID))
-      setEvent(ev ?? null)
-    }, 0)
-    return () => clearTimeout(t)
-  }, [id])
+  useEffect(
+    () =>
+      ((t: ReturnType<typeof setTimeout>) => () => clearTimeout(t))(
+        setTimeout(
+          () =>
+            setEvent(
+              getEvents().find(
+                (e) => e.id === id && e.providerIds.includes(PROVEEDOR_ID)
+              ) ?? null
+            ),
+          0
+        )
+      ),
+    [id]
+  )
 
   if (!event) {
     return (
@@ -41,24 +59,17 @@ export default function ProveedorEventoPage() {
   }
 
   const venue = VENUES.find((v) => v.id === event.venueId)
-  const isApproved = event.statusProvider === 'Documentación Aprobada'
   const isRejected = event.statusProvider === 'Documentación Rechazada'
 
-  const handleSubmitValidacionA = () => {
-    setModalA(false)
-    // Demo: no cambia estado hasta que "admin apruebe"; opcionalmente mostrar "Enviado"
-  }
+  const handleSubmitValidacionA = () => setModalA(false)
 
-  const handleSubmitValidacionB = () => {
-    setModalB(false)
-    updateEvent(id, { statusProvider: 'Documentación Aprobada' })
+  const handleSubmitValidacionB = () => (
+    setModalB(false),
+    updateEvent(id, { statusProvider: 'Documentación Aprobada' }),
     setEvent((e) => (e ? { ...e, statusProvider: 'Documentación Aprobada' } : null))
-  }
+  )
 
-  const handleSubmitWorker = () => {
-    setModalWorker(false)
-    setWorkerRole('')
-  }
+  const handleSubmitWorker = () => (setModalWorker(false), setWorkerRole(''))
 
   return (
     <div>
@@ -73,13 +84,7 @@ export default function ProveedorEventoPage() {
 
       <span
         className="mt-4 inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white"
-        style={{
-          background: isApproved
-            ? 'var(--approved)'
-            : isRejected
-              ? 'var(--rejected)'
-              : 'var(--pending)',
-        }}
+        style={{ background: statusProviderBg(event.statusProvider) }}
       >
         {event.statusProvider ?? 'Cargar Documentación'}
       </span>

@@ -149,12 +149,7 @@ export default function RRHHPage() {
                 </p>
               </div>
               <span
-                className="rounded-full px-3 py-1 text-xs font-medium"
-                style={
-                  e.status === 'Activo'
-                    ? { background: '#d1fae5', color: 'var(--success)' }
-                    : { background: '#fee', color: 'var(--error)' }
-                }
+                className={`rounded-full px-3 py-1 text-xs font-medium ${e.status === 'Activo' ? 'bg-success-soft text-approved' : 'bg-error-soft text-rejected'}`}
               >
                 {e.status}
               </span>

@@ -19,12 +19,12 @@ import type { Event } from '@/types'
 
 function statusBadgeClass(status: Event['statusAdmin']) {
   if (status === 'LIVE') {
-    return 'bg-[#ffe5e5] text-[var(--error)]'
+    return 'bg-error-soft text-rejected'
   }
   if (status === 'VALIDACIÓN') {
-    return 'bg-[#fff3cd] text-[#856404]'
+    return 'bg-warning-soft text-warning-soft-text'
   }
-  return 'bg-[#e5e7ff] text-[var(--accent)]'
+  return 'bg-accent-soft text-accent'
 }
 
 export default function AdminEventoPage() {
@@ -34,13 +34,16 @@ export default function AdminEventoPage() {
   const [loadingNotify, setLoadingNotify] = useState<string | null>(null)
   const [loadingApprove, setLoadingApprove] = useState<string | null>(null)
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const ev = getEvents().find((e) => e.id === id)
-      setEvent(ev ?? null)
-    }, 0)
-    return () => clearTimeout(t)
-  }, [id])
+  useEffect(
+    () =>
+      ((t: ReturnType<typeof setTimeout>) => () => clearTimeout(t))(
+        setTimeout(
+          () => setEvent(getEvents().find((e) => e.id === id) ?? null),
+          0
+        )
+      ),
+    [id]
+  )
 
   useDocumentTitle(event ? `${event.name} - VALID` : 'Evento - VALID')
 
@@ -66,15 +69,11 @@ export default function AdminEventoPage() {
   const validados = Math.floor(totalEmployees * 0.28)
   const pendientes = totalEmployees - validados
 
-  const handleNotify = (companyName: string) => {
-    setLoadingNotify(companyName)
-    setTimeout(() => setLoadingNotify(null), 600)
-  }
+  const handleNotify = (companyName: string) =>
+    (setLoadingNotify(companyName), setTimeout(() => setLoadingNotify(null), 600))
 
-  const handleApprove = (companyName: string) => {
-    setLoadingApprove(companyName)
-    setTimeout(() => setLoadingApprove(null), 600)
-  }
+  const handleApprove = (companyName: string) =>
+    (setLoadingApprove(companyName), setTimeout(() => setLoadingApprove(null), 600))
 
   return (
     <div className="mx-auto max-w-[1200px] px-6 py-6">
@@ -88,7 +87,7 @@ export default function AdminEventoPage() {
 
       {/* Event Header */}
       <div
-        className="mb-6 overflow-hidden rounded-[var(--radius-lg)] border shadow-[var(--shadow)]"
+        className="mb-6 overflow-hidden rounded-lg border shadow-(--shadow)"
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         <div className="relative h-[200px] w-full bg-[#1a1a1a]">
@@ -193,11 +192,10 @@ export default function AdminEventoPage() {
         <div className="grid gap-3">
           {MOCK_COMPANIES.map((company) => (
             <div
-              className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4 shadow-sm ${
-                company.status === 'error'
+              className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4 shadow-sm ${company.status === 'error'
                   ? 'border-red-500 bg-[#fff5f5]'
                   : 'border-emerald-500 bg-[#f0fdf4]'
-              }`}
+                }`}
               key={company.cuit}
             >
               <div className="min-w-0 flex-1">
@@ -210,15 +208,14 @@ export default function AdminEventoPage() {
               </div>
               <div className="flex items-center gap-2.5">
                 <div
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-sm ${
-                    company.status === 'error' ? 'bg-[#ffe5e5]' : 'bg-[#d1fae5]'
-                  }`}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-sm ${company.status === 'error' ? 'bg-error-soft' : 'bg-success-soft'
+                    }`}
                 >
                   {company.status === 'error' ? '⚠️' : '✓'}
                 </div>
                 {company.status === 'error' ? (
                   <button
-                    className="rounded-lg bg-[#fff3cd] px-3 py-1.5 text-[11px] font-semibold text-[#856404] transition-colors hover:bg-[#ffeaa7] disabled:opacity-70"
+                    className="rounded-lg bg-warning-soft px-3 py-1.5 text-[11px] font-semibold text-warning-soft-text transition-colors hover:bg-warning-soft-hover disabled:opacity-70"
                     disabled={loadingNotify === company.razonSocial}
                     onClick={() => handleNotify(company.razonSocial)}
                     type="button"
@@ -227,7 +224,7 @@ export default function AdminEventoPage() {
                   </button>
                 ) : (
                   <button
-                    className="rounded-lg bg-[#d1fae5] px-3 py-1.5 text-[11px] font-semibold text-[#047857] transition-colors hover:bg-[#a7f3d0] disabled:opacity-70"
+                    className="rounded-lg bg-success-soft px-3 py-1.5 text-[11px] font-semibold text-success-soft-text transition-colors hover:bg-success-soft-hover disabled:opacity-70"
                     disabled={loadingApprove === company.razonSocial}
                     onClick={() => handleApprove(company.razonSocial)}
                     type="button"
@@ -249,9 +246,9 @@ export default function AdminEventoPage() {
         <div className="grid gap-5 lg:grid-cols-2">
           {/* Validación Empresas */}
           <div
-            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm"
+            className="rounded-lg border border-(--border) bg-(--surface) p-6 shadow-sm"
           >
-            <div className="mb-5 flex items-center justify-between border-b border-[var(--border)] pb-4">
+            <div className="mb-5 flex items-center justify-between border-b border-(--border) pb-4">
               <h3 className="text-lg font-bold text-[#1d1d1f]">
                 Validación Empresas
               </h3>
@@ -271,23 +268,23 @@ export default function AdminEventoPage() {
               ))}
             </ul>
             <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg)] p-3 text-center">
-                <div className="text-2xl font-bold text-[var(--approved)]">
+              <div className="rounded-[10px] border border-(--border) bg-(--bg) p-3 text-center">
+                <div className="text-2xl font-bold text-approved">
                   {MOCK_VALIDATION_EMPRESAS_STATS.aprobadas}
                 </div>
                 <div className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>
                   Aprobadas
                 </div>
               </div>
-              <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg)] p-3 text-center">
-                <div className="text-2xl font-bold text-[var(--error)]">
+              <div className="rounded-[10px] border border-(--border) bg-(--bg) p-3 text-center">
+                <div className="text-2xl font-bold text-(--error)">
                   {MOCK_VALIDATION_EMPRESAS_STATS.conErrores}
                 </div>
                 <div className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>
                   Con errores
                 </div>
               </div>
-              <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg)] p-3 text-center">
+              <div className="rounded-[10px] border border-(--border) bg-(--bg) p-3 text-center">
                 <div className="text-2xl font-bold text-[#1d1d1f]">
                   {MOCK_VALIDATION_EMPRESAS_STATS.total}
                 </div>
@@ -300,9 +297,9 @@ export default function AdminEventoPage() {
 
           {/* Validación vs Nómina */}
           <div
-            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm"
+            className="rounded-lg border border-(--border) bg-(--surface) p-6 shadow-sm"
           >
-            <div className="mb-5 flex items-center justify-between border-b border-[var(--border)] pb-4">
+            <div className="mb-5 flex items-center justify-between border-b border-(--border) pb-4">
               <h3 className="text-lg font-bold text-[#1d1d1f]">
                 Validación vs Nómina
               </h3>
@@ -322,24 +319,24 @@ export default function AdminEventoPage() {
               ))}
             </ul>
             <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg)] p-3 text-center">
-                <div className="text-2xl font-bold text-[var(--approved)]">
+              <div className="rounded-[10px] border border-(--border) bg-(--bg) p-3 text-center">
+                <div className="text-2xl font-bold text-approved">
                   {MOCK_VALIDATION_NOMINA_STATS.validados}
                 </div>
                 <div className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>
                   Validados
                 </div>
               </div>
-              <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg)] p-3 text-center">
-                <div className="text-2xl font-bold text-[var(--error)]">
+              <div className="rounded-[10px] border border-(--border) bg-(--bg) p-3 text-center">
+                <div className="text-2xl font-bold text-(--error)">
                   {MOCK_VALIDATION_NOMINA_STATS.errores}
                 </div>
                 <div className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>
                   Errores
                 </div>
               </div>
-              <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg)] p-3 text-center">
-                <div className="text-2xl font-bold text-[var(--warning)]">
+              <div className="rounded-[10px] border border-(--border) bg-(--bg) p-3 text-center">
+                <div className="text-2xl font-bold text-(--warning)">
                   {MOCK_VALIDATION_NOMINA_STATS.pendientes}
                 </div>
                 <div className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>

@@ -28,6 +28,16 @@
   --error: #ff3b30;
   --warning: #ff9f0a;
 
+  /* Fondos y texto suaves (badges, alertas, estados) */
+  --accent-soft: #e5e7ff;
+  --error-soft: #ffe5e5;
+  --warning-soft: #fff3cd;
+  --warning-soft-text: #856404;
+  --warning-soft-hover: #ffeaa7;
+  --success-soft: #d1fae5;
+  --success-soft-text: #047857;
+  --success-soft-hover: #a7f3d0;
+
   --background: var(--bg);
   --foreground: var(--text);
 
@@ -43,6 +53,14 @@
   --color-pending: var(--pending);
   --color-approved: var(--approved);
   --color-rejected: var(--rejected);
+  --color-accent-soft: var(--accent-soft);
+  --color-error-soft: var(--error-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-text: var(--warning-soft-text);
+  --color-warning-soft-hover: var(--warning-soft-hover);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-text: var(--success-soft-text);
+  --color-success-soft-hover: var(--success-soft-hover);
   --font-sans: var(--font-sans-ui);
   --font-mono: var(--font-mono-ui);
 }
