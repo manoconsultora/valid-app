@@ -9,21 +9,19 @@ interface NavbarLogoProps {
 /**
  * Logo reutilizable para el navbar (usa /public/logo.png).
  */
-export function NavbarLogo({
+export const NavbarLogo = ({
   href,
   label = 'VALID - Sistema de Validación Documental',
-}: NavbarLogoProps) {
-  return (
-    <Link href={href} className="flex items-center gap-2" aria-label={label}>
+}: NavbarLogoProps) => (
+    <Link aria-label={label} className="flex items-center gap-2" href={href}>
       <Image
-        src="/logo.png"
         alt={label}
-        width={96}
         height={24}
         priority
+        src="/logo.png"
         style={{ height: '24px', width: 'auto' }}
+        width={96}
       />
     </Link>
-  )
-}
+  );
 

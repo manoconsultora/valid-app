@@ -4,90 +4,87 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-import type { Event } from '@/types'
 
-import { getEvents } from '@/lib/events-store'
-import { VENUES } from '@/lib/constants'
-import { getSession } from '@/lib/session'
 import { MetricCard } from '@/components/ui/MetricCard'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { VENUES } from '@/lib/constants'
+import { getEvents } from '@/lib/events-store'
+import { getSession } from '@/lib/session'
+import type { Event } from '@/types'
 
 export default function AdminDashboardPage() {
   const [events, setEvents] = useState<Event[]>([])
-  const [userName, setUserName] = useState('')
   const venueById = Object.fromEntries(VENUES.map((v) => [v.id, v]))
+  const userName = getSession()?.user?.name ?? ''
 
-  useEffect(() => {
-    const t = setTimeout(() => setEvents(getEvents()), 0)
-    return () => clearTimeout(t)
-  }, [])
+  useDocumentTitle('Panel de Control - VALID')
 
-  useEffect(() => {
-    document.title = 'Panel de Control - CREW'
-  }, [])
+  useEffect(
+    () =>
+      ((t: ReturnType<typeof setTimeout>) => () => clearTimeout(t))(
+        setTimeout(() => setEvents(getEvents()), 0)
+      ),
+    []
+  )
 
-  useEffect(() => {
-    const session = getSession()
-    if (session?.user.name) setUserName(session.user.name)
-  }, [])
-
-  const totalProviders = events.reduce((acc, e) => acc + e.providerIds.length, 0)
   const uniqueProviders = new Set(events.flatMap((e) => e.providerIds)).size
   const totalEmployees = events.reduce((acc, e) => acc + (e.employeeCount ?? 0), 0)
   const companiesWithDocs = Math.min(uniqueProviders, 15)
   const companiesTotal = Math.max(uniqueProviders, 15)
   const validatedEmployees = Math.floor(totalEmployees * 0.76)
 
-  const statusClass = (status: Event['statusAdmin']) => {
-    if (status === 'LIVE') return 'bg-[var(--rejected)]'
-    if (status === 'VALIDACIÓN') return 'bg-[var(--warning)]'
-    return 'bg-[var(--accent)]'
-  }
+  const statusClass = (status: Event['statusAdmin']) =>
+    ({
+      ARMADO: 'bg-accent',
+      LIVE: 'bg-[var(--rejected)]',
+      VALIDACIÓN: 'bg-[var(--warning)]',
+    }[status])
 
   return (
     <div className="mx-auto max-w-[1400px]">
       <PageHeader
-        title={`Hola, ${userName || 'Admin'} 👋`}
         subtitle="Bienvenida al panel de control"
+        title={`Hola, ${userName || 'Admin'} 👋`}
       />
 
       {/* Stats */}
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricCard
+          helper={`${Math.round((companiesWithDocs / companiesTotal) * 100)}% completado`}
           icon="📋"
           iconBg="#f5f3ff"
+          label="Empresas con docs"
           primary={String(companiesWithDocs)}
           secondary={`/${companiesTotal}`}
-          label="Empresas con docs"
-          helper={`${Math.round((companiesWithDocs / companiesTotal) * 100)}% completado`}
         />
 
         <MetricCard
+          helper="Requieren corrección"
           icon="⚠️"
           iconBg="#fffbeb"
-          primary="3"
           label="Empresas con errores"
-          helper="Requieren corrección"
+          primary="3"
         />
 
         <MetricCard
+          helper="Según lista de ingreso"
           icon="👥"
           iconBg="#eff6ff"
-          primary={String(totalEmployees || 247)}
           label="Total empleados"
-          helper="Según lista de ingreso"
+          primary={String(totalEmployees || 247)}
         />
 
         <MetricCard
-          icon="✓"
-          iconBg="#f0fdf4"
-          primary={String(validatedEmployees || 189)}
-          label="Empleados validados"
           helper={
             totalEmployees
               ? `${Math.round((validatedEmployees / totalEmployees) * 100)}% del total`
               : '76% del total'
           }
+          icon="✓"
+          iconBg="#f0fdf4"
+          label="Empleados validados"
+          primary={String(validatedEmployees || 189)}
         />
       </div>
 

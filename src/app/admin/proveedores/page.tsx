@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { PROVIDER_CATEGORIES } from '@/lib/constants'
 import { addProvider, getProviders } from '@/lib/providers-store'
 import type { Provider } from '@/types'
@@ -35,29 +36,30 @@ export default function ProveedoresPage() {
     razonSocial: '',
   })
 
-  useEffect(() => {
-    const t = setTimeout(() => setList(getProviders()), 0)
-    return () => clearTimeout(t)
-  }, [])
+  useDocumentTitle('Proveedores - VALID')
 
-  useEffect(() => {
-    document.title = 'Proveedores - CREW'
-  }, [])
+  useEffect(
+    () => ((t: ReturnType<typeof setTimeout>) => () => clearTimeout(t))(setTimeout(() => setList(getProviders()), 0)),
+    []
+  )
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return list
-    const q = search.trim().toLowerCase()
-    return list.filter(
-      (p) =>
-        p.razonSocial.toLowerCase().includes(q) ||
-        p.cuit.replace(/-/g, '').includes(q.replace(/-/g, '')) ||
-        (PROVIDER_CATEGORIES.find((c) => c.id === p.categoryId)?.name ?? '').toLowerCase().includes(q)
-    )
-  }, [list, search])
+  const q = search.trim().toLowerCase()
+  const filtered = useMemo(
+    () =>
+      !search.trim()
+        ? list
+        : list.filter(
+            (p) =>
+              p.razonSocial.toLowerCase().includes(q) ||
+              p.cuit.replace(/-/g, '').includes(q.replace(/-/g, '')) ||
+              (PROVIDER_CATEGORIES.find((c) => c.id === p.categoryId)?.name ?? '').toLowerCase().includes(q)
+          ),
+    [list, q, search]
+  )
 
-  const openModal = () => {
-    setShowModal(true)
-    setGeneratedCreds(null)
+  const openModal = () => (
+    setShowModal(true),
+    setGeneratedCreds(null),
     setForm({
       categoryId: '',
       contactName: '',
@@ -67,17 +69,17 @@ export default function ProveedoresPage() {
       phone: '',
       razonSocial: '',
     })
-  }
+  )
 
-  const handleGenerateCreds = () => {
-    const email = form.email || `proveedor${Date.now()}@empresa.com`
-    const password = `generada${Math.random().toString(36).slice(2, 8)}`
-    setGeneratedCreds({ email, password })
-  }
+  const handleGenerateCreds = () =>
+    setGeneratedCreds({
+      email: form.email || `proveedor${Date.now()}@empresa.com`,
+      password: `generada${Math.random().toString(36).slice(2, 8)}`,
+    })
 
-  const handleSave = () => {
-    if (!form.razonSocial || !form.cuit || !form.categoryId || !form.email) return
-    addProvider({
+  const handleSave = () =>
+    form.razonSocial && form.cuit && form.categoryId && form.email &&
+    (addProvider({
       categoryId: form.categoryId,
       contactName: form.contactName,
       contactRole: form.contactRole,
@@ -85,10 +87,9 @@ export default function ProveedoresPage() {
       email: form.email,
       phone: form.phone,
       razonSocial: form.razonSocial,
-    })
-    setList(getProviders())
-    setShowModal(false)
-  }
+    }),
+    setList(getProviders()),
+    setShowModal(false))
 
   return (
     <div className="mx-auto max-w-[1000px]">
@@ -105,7 +106,7 @@ export default function ProveedoresPage() {
           Proveedores
         </h1>
         <button
-          className="rounded-[var(--radius)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          className="rounded-(--radius) px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
           onClick={openModal}
           style={{ background: 'var(--accent)' }}
           type="button"
@@ -115,7 +116,7 @@ export default function ProveedoresPage() {
       </div>
 
       <div
-        className="mb-6 rounded-[var(--radius)] border px-4 py-3 shadow-[var(--shadow)]"
+        className="mb-6 rounded-(--radius) border px-4 py-3 shadow-(--shadow)"
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         <input
@@ -128,7 +129,7 @@ export default function ProveedoresPage() {
       </div>
 
       <div
-        className="rounded-[var(--radius)] border shadow-[var(--shadow)] overflow-hidden"
+        className="rounded-(--radius) border shadow-(--shadow) overflow-hidden"
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         <ul className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -138,7 +139,7 @@ export default function ProveedoresPage() {
               key={p.id}
             >
               <div
-                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white"
                 style={{ background: AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length] }}
               >
                 {getInitials(p.razonSocial)}
@@ -166,7 +167,7 @@ export default function ProveedoresPage() {
           role="dialog"
         >
           <div
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-[var(--border)] bg-white p-6 shadow-[var(--shadow-lg)]"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-(--border) bg-white p-6 shadow-(--shadow-lg)"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -187,7 +188,7 @@ export default function ProveedoresPage() {
               <div>
                 <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>Razón Social</label>
                 <input
-                  className="mt-1 w-full rounded-[var(--radius)] border border-[var(--border)] px-3 py-2"
+                  className="mt-1 w-full rounded-(--radius) border border-(--border) px-3 py-2"
                   onChange={(e) => setForm((f) => ({ ...f, razonSocial: e.target.value }))}
                   placeholder="Ej: SULLAIR ARGENTINA SA"
                   value={form.razonSocial}
@@ -196,7 +197,7 @@ export default function ProveedoresPage() {
               <div>
                 <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>CUIT</label>
                 <input
-                  className="mt-1 w-full rounded-[var(--radius)] border border-[var(--border)] px-3 py-2 font-mono"
+                  className="mt-1 w-full rounded-(--radius) border border-(--border) px-3 py-2 font-mono"
                   onChange={(e) => setForm((f) => ({ ...f, cuit: e.target.value }))}
                   placeholder="30-12345678-9"
                   value={form.cuit}
@@ -205,7 +206,7 @@ export default function ProveedoresPage() {
               <div>
                 <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>Categoría</label>
                 <select
-                  className="mt-1 w-full rounded-[var(--radius)] border border-[var(--border)] px-3 py-2"
+                  className="mt-1 w-full rounded-(--radius) border border-(--border) px-3 py-2"
                   onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                   value={form.categoryId}
                 >
@@ -218,7 +219,7 @@ export default function ProveedoresPage() {
               <div>
                 <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>Email Corporativo</label>
                 <input
-                  className="mt-1 w-full rounded-[var(--radius)] border border-[var(--border)] px-3 py-2"
+                  className="mt-1 w-full rounded-(--radius) border border-(--border) px-3 py-2"
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   placeholder="contacto@empresa.com"
                   type="email"
@@ -228,7 +229,7 @@ export default function ProveedoresPage() {
               <div>
                 <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>Teléfono</label>
                 <input
-                  className="mt-1 w-full rounded-[var(--radius)] border border-[var(--border)] px-3 py-2"
+                  className="mt-1 w-full rounded-(--radius) border border-(--border) px-3 py-2"
                   onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                   placeholder="+54 9 11 1234-5678"
                   type="tel"
@@ -238,7 +239,7 @@ export default function ProveedoresPage() {
               <div>
                 <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>Contacto Responsable</label>
                 <input
-                  className="mt-1 w-full rounded-[var(--radius)] border border-[var(--border)] px-3 py-2"
+                  className="mt-1 w-full rounded-(--radius) border border-(--border) px-3 py-2"
                   onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
                   placeholder="Nombre del responsable"
                   value={form.contactName}
@@ -247,7 +248,7 @@ export default function ProveedoresPage() {
               <div>
                 <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>Función del Contacto</label>
                 <input
-                  className="mt-1 w-full rounded-[var(--radius)] border border-[var(--border)] px-3 py-2"
+                  className="mt-1 w-full rounded-(--radius) border border-(--border) px-3 py-2"
                   onChange={(e) => setForm((f) => ({ ...f, contactRole: e.target.value }))}
                   placeholder="Ej: Recursos Humanos, Dueño, Gerente de Operaciones"
                   value={form.contactRole}
@@ -268,7 +269,7 @@ export default function ProveedoresPage() {
                   Contraseña: {generatedCreds?.password ?? '-'}
                 </p>
                 <button
-                  className="mt-2 rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-1.5 text-sm transition-colors hover:bg-gray-50"
+                  className="mt-2 rounded-(--radius) border border-(--border) bg-white px-3 py-1.5 text-sm transition-colors hover:bg-gray-50"
                   onClick={handleGenerateCreds}
                   type="button"
                 >
@@ -279,7 +280,7 @@ export default function ProveedoresPage() {
 
             <div className="mt-6 flex gap-3">
               <button
-                className="rounded-[var(--radius)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                className="rounded-(--radius) px-4 py-2 text-sm font-medium text-white hover:opacity-90"
                 onClick={handleSave}
                 style={{ background: 'var(--accent)' }}
                 type="button"
@@ -287,7 +288,7 @@ export default function ProveedoresPage() {
                 Guardar
               </button>
               <button
-                className="rounded-[var(--radius)] border border-[var(--border)] px-4 py-2 text-sm font-medium"
+                className="rounded-(--radius) border border-(--border) px-4 py-2 text-sm font-medium"
                 onClick={() => setShowModal(false)}
                 style={{ color: 'var(--text)' }}
                 type="button"

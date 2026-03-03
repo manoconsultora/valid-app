@@ -1,41 +1,25 @@
- 'use client'
+'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback } from 'react'
 
-import { clearSession, getSession } from '@/lib/session'
 import { NavbarLogo } from '@/components/ui/NavbarLogo'
+import { useMounted } from '@/hooks/useMounted'
+import { useProveedorGuard } from '@/hooks/useProveedorGuard'
+import { clearSession } from '@/lib/session'
 
 export default function ProveedorLayout({
   children,
 }: { children: React.ReactNode }) {
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setMounted(true)
-    }, 0)
-    return () => {
-      clearTimeout(t)
-    }
-  }, [])
+  useProveedorGuard(mounted)
 
-  useEffect(() => {
-    if (!mounted) {
-      return
-    }
-    const session = getSession()
-    if (!session || session.user.role !== 'proveedor') {
-      router.replace('/login')
-    }
-  }, [mounted, router])
-
-  const handleLogout = () => {
-    clearSession()
-    router.replace('/login')
-  }
+  const handleLogout = useCallback(
+    () => (clearSession(), router.replace('/login')),
+    [router]
+  )
 
   if (!mounted) {
     return (

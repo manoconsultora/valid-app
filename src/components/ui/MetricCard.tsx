@@ -11,15 +11,14 @@ interface MetricCardProps {
  * Tarjeta compacta para métricas de dashboard (admin, proveedor, etc.).
  * Usa el sistema de tokens globales y acepta colores de fondo para el icono via props.
  */
-export function MetricCard({
+export const MetricCard = ({
+  helper,
   icon,
   iconBg,
+  label,
   primary,
   secondary,
-  label,
-  helper,
-}: MetricCardProps) {
-  return (
+}: MetricCardProps) => (
     <div
       className="rounded-2xl border p-4"
       style={{
@@ -63,6 +62,5 @@ export function MetricCard({
         </div>
       ) : null}
     </div>
-  )
-}
+  );
 
