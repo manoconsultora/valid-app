@@ -19,6 +19,8 @@ export default function CrearEventoPage() {
   const [providers] = useState<Provider[]>(() => getProviders())
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
+  const [setupStartDate, setSetupStartDate] = useState('')
+  const [teardownEndDate, setTeardownEndDate] = useState('')
   const [venueId, setVenueId] = useState('')
   const [timeRange, setTimeRange] = useState('')
   const [description, setDescription] = useState('')
@@ -48,6 +50,8 @@ export default function CrearEventoPage() {
           date,
           description,
           name,
+          setupStartDate: setupStartDate || undefined,
+          teardownEndDate: teardownEndDate || undefined,
           protocolNotes: protocolNotes || undefined,
           providerIds,
           statusAdmin: 'ARMADO',
@@ -145,6 +149,36 @@ export default function CrearEventoPage() {
                 type="date"
                 value={date}
               />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-(--text)" htmlFor="setupStartDate">
+                Fecha de Inicio de Previa
+              </label>
+              <input
+                className="w-full rounded-(--radius) border border-(--border) bg-white px-3 py-2"
+                id="setupStartDate"
+                onChange={(e) => setSetupStartDate(e.target.value)}
+                type="date"
+                value={setupStartDate}
+              />
+              <p className="mt-0.5 text-xs text-(--text-secondary)">
+                Inicio del pre-evento (armado / montaje)
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-(--text)" htmlFor="teardownEndDate">
+                Fecha de Culminación de Desarme
+              </label>
+              <input
+                className="w-full rounded-(--radius) border border-(--border) bg-white px-3 py-2"
+                id="teardownEndDate"
+                onChange={(e) => setTeardownEndDate(e.target.value)}
+                type="date"
+                value={teardownEndDate}
+              />
+              <p className="mt-0.5 text-xs text-(--text-secondary)">
+                Fin del post-evento (desarme)
+              </p>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-(--text)" htmlFor="venue">

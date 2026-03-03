@@ -48,6 +48,10 @@ export interface Event {
   date: string
   /** Fecha para mostrar en cards (ej. "23-24 Octubre 2026"). */
   dateDisplay?: string
+  /** Setup / load-in start date (pre-event). */
+  setupStartDate?: string
+  /** Teardown / load-out end date (post-event). */
+  teardownEndDate?: string
   venueId: string
   timeRange: string
   description: string
