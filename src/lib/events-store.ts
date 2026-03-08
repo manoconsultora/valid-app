@@ -1,33 +1,42 @@
-import { MOCK_EVENTS } from '@/data/mock-events'
+import { DB_EVENTS, DB_EVENT_PROVIDERS } from '@/data/mock-db'
+import { dbEventToApp, getProviderIdsByEventId } from '@/lib/adapters/db-to-app'
 import type { Event } from '@/types'
 
-
 const KEY = 'valid_events'
-const MOCK_IDS = new Set(MOCK_EVENTS.map((e) => e.id))
+const MOCK_IDS = new Set(DB_EVENTS.map((e) => e.id))
+const providerIdsByEvent = getProviderIdsByEventId(DB_EVENT_PROVIDERS)
+const IS_NEW_IDS = new Set(['e0', 'e1', 'e2'])
+
+const buildSeedEvents = (): Event[] => DB_EVENTS.map((db) =>
+    dbEventToApp(db, providerIdsByEvent.get(db.id) ?? [], {
+      isNew: IS_NEW_IDS.has(db.id),
+    })
+  );
+
+const SEED_EVENTS = buildSeedEvents()
 
 /**
- * Siempre usa MOCK_EVENTS como fuente de verdad para eventos demo (incl. flyerUrl).
- * Los eventos creados por el usuario (id no en mocks) se leen de localStorage y se agregan al final.
+ * Eventos demo desde mock-db (forma API); eventos de usuario desde localStorage.
  */
 function read(): Event[] {
   if (typeof window === 'undefined') {
-    return MOCK_EVENTS
+    return SEED_EVENTS
   }
   try {
     const raw = window.localStorage.getItem(KEY)
     const stored: Event[] = raw ? (JSON.parse(raw) as Event[]) : []
     const userEvents = stored.filter((e) => !MOCK_IDS.has(e.id))
-    const merged = [...MOCK_EVENTS, ...userEvents]
+    const merged = [...SEED_EVENTS, ...userEvents]
     if (userEvents.length > 0) {
       window.localStorage.setItem(KEY, JSON.stringify(merged))
     }
     return merged
   } catch {
-    return MOCK_EVENTS
+    return SEED_EVENTS
   }
 }
 
-export const getEvents = (): Event[] => read();
+export const getEvents = (): Event[] => read()
 
 export function addEvent(event: Omit<Event, 'id'>): Event {
   const events = read()

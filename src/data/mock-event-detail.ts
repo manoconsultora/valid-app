@@ -1,27 +1,13 @@
 /**
  * Datos demo para la vista de detalle de evento (admin).
  * En fase 2 vendrían del backend.
+ * Empresas asignadas: getEventProvidersForEvent() + getProviders() (mock-db).
  */
-
-export interface CompanyAssignment {
-  cuit: string
-  employees: number
-  razonSocial: string
-  status: 'error' | 'success'
-}
 
 export interface ValidationError {
   title: string
   description: string
 }
-
-/** Empresas asignadas con estado de documentación (demo). */
-export const MOCK_COMPANIES: CompanyAssignment[] = [
-  { cuit: '30-57672171-0', employees: 17, razonSocial: 'SULLAIR ARGENTINA SA', status: 'error' },
-  { cuit: '30-71234567-8', employees: 12, razonSocial: 'TECNO EVENTOS SRL', status: 'success' },
-  { cuit: '30-61234567-9', employees: 8, razonSocial: 'ILUMINACIÓN PRO SA', status: 'error' },
-  { cuit: '30-81234567-0', employees: 15, razonSocial: 'SONIDO MASTER SRL', status: 'success' },
-]
 
 /** Errores de validación empresarial (demo). */
 export const MOCK_VALIDATION_EMPRESAS: ValidationError[] = [
