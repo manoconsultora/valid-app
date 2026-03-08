@@ -1,22 +1,23 @@
-import { MOCK_PROVIDERS } from '@/data/mock-providers'
+import { DB_PROVIDERS } from '@/data/mock-db'
+import { dbProviderToApp } from '@/lib/adapters/db-to-app'
 import type { Provider } from '@/types'
 
-
 const KEY = 'valid_providers'
+const SEED_PROVIDERS = DB_PROVIDERS.map(dbProviderToApp)
 
 function read(): Provider[] {
   if (typeof window === 'undefined') {
-    return MOCK_PROVIDERS
+    return SEED_PROVIDERS
   }
   try {
     const raw = window.localStorage.getItem(KEY)
     if (!raw) {
-      window.localStorage.setItem(KEY, JSON.stringify(MOCK_PROVIDERS))
-      return MOCK_PROVIDERS
+      window.localStorage.setItem(KEY, JSON.stringify(SEED_PROVIDERS))
+      return SEED_PROVIDERS
     }
     return JSON.parse(raw) as Provider[]
   } catch {
-    return MOCK_PROVIDERS
+    return SEED_PROVIDERS
   }
 }
 

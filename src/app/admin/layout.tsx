@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
+import { FooterAdmin } from '@/components/FooterAdmin'
 import { NavbarLogo } from '@/components/ui/NavbarLogo'
 import { useAdminGuard } from '@/hooks/useAdminGuard'
 import { useClickOutside } from '@/hooks/useClickOutside'
@@ -153,6 +154,7 @@ export default function AdminLayout({
         userName={userName}
       />
       <main className="mx-auto px-6 py-6">{children}</main>
+      <FooterAdmin />
     </div>
   )
 }

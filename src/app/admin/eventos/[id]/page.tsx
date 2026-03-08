@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
+import { Badge } from '@/components/ui/Badge'
+import { getEventProvidersForEvent } from '@/data/mock-db'
 import {
-  MOCK_COMPANIES,
   MOCK_VALIDATION_EMPRESAS,
   MOCK_VALIDATION_EMPRESAS_STATS,
   MOCK_VALIDATION_NOMINA,
@@ -14,18 +15,10 @@ import {
 } from '@/data/mock-event-detail'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { VENUES } from '@/lib/constants'
+import { statusAdminToBadgeVariant } from '@/lib/event-utils'
 import { getEvents } from '@/lib/events-store'
+import { getProviders } from '@/lib/providers-store'
 import type { Event } from '@/types'
-
-function statusBadgeClass(status: Event['statusAdmin']) {
-  if (status === 'LIVE') {
-    return 'bg-error-soft text-rejected'
-  }
-  if (status === 'VALIDACIÓN') {
-    return 'bg-warning-soft text-warning-soft-text'
-  }
-  return 'bg-accent-soft text-accent'
-}
 
 export default function AdminEventoPage() {
   const params = useParams()
@@ -68,6 +61,25 @@ export default function AdminEventoPage() {
   const totalEmployees = event.employeeCount ?? 0
   const validados = Math.floor(totalEmployees * 0.28)
   const pendientes = totalEmployees - validados
+
+  const providerList = getProviders()
+  const eventProviders = getEventProvidersForEvent(event.id)
+  const companies = eventProviders
+    .map((ep) => {
+      const provider = providerList.find((p) => p.id === ep.provider_id)
+      if (!provider) {
+        return null
+      }
+      const status: 'error' | 'success' =
+        ep.documentation_status === 'approved' ? 'success' : 'error'
+      return {
+        cuit: provider.cuit,
+        employees: ep.employee_count,
+        razonSocial: provider.razonSocial,
+        status,
+      }
+    })
+    .filter((c): c is NonNullable<typeof c> => c != null)
 
   const handleNotify = (companyName: string) =>
     (setLoadingNotify(companyName), setTimeout(() => setLoadingNotify(null), 600))
@@ -125,11 +137,12 @@ export default function AdminEventoPage() {
               >
                 {event.name}
               </h1>
-              <span
-                className={`rounded-[10px] px-4 py-2 text-xs font-semibold uppercase tracking-wider ${statusBadgeClass(event.statusAdmin)}`}
+              <Badge
+                className="rounded-[10px] px-4 py-2 uppercase tracking-wider"
+                variant={statusAdminToBadgeVariant(event.statusAdmin)}
               >
                 {event.statusAdmin}
-              </span>
+              </Badge>
             </div>
           </div>
         </div>
@@ -190,7 +203,7 @@ export default function AdminEventoPage() {
           Empresas Asignadas
         </h2>
         <div className="grid gap-3">
-          {MOCK_COMPANIES.map((company) => (
+          {companies.map((company) => (
             <div
               className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4 shadow-sm ${company.status === 'error'
                   ? 'border-red-500 bg-[#fff5f5]'

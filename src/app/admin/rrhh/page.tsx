@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
+import { Badge } from '@/components/ui/Badge'
 import { MOCK_EMPLOYEES, RRHH_COMPANIES } from '@/data/mock-employees'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import type { Employee } from '@/types'
@@ -148,11 +149,9 @@ export default function RRHHPage() {
                   CUIL: <span className="font-mono">{e.cuil}</span> • {getCompanyName(e.companyId)} • {e.position}
                 </p>
               </div>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-medium ${e.status === 'Activo' ? 'bg-success-soft text-approved' : 'bg-error-soft text-rejected'}`}
-              >
+              <Badge variant={e.status === 'Activo' ? 'successSoft' : 'errorSoft'}>
                 {e.status}
-              </span>
+              </Badge>
             </li>
           ))}
         </ul>
