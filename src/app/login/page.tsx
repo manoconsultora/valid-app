@@ -107,6 +107,7 @@ export default function LoginPage() {
                 objectFit: 'contain',
                 width: '100%',
               }}
+              unoptimized
               width={160}
             />
           </div>
@@ -120,6 +121,7 @@ export default function LoginPage() {
                 objectFit: 'contain',
                 width: '100%',
               }}
+              unoptimized
               width={160}
             />
           </div>

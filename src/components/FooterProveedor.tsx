@@ -5,7 +5,7 @@ import Image from 'next/image'
 export const FooterProveedor = ({ onLogout }: { onLogout: () => void }) => (
     <div className="footer">
       <div className="footer-logo">
-        <Image alt="CREW Logo" height={48} src="/logo.png" width={48} />
+        <Image alt="CREW Logo" height={48} src="/logo.png" unoptimized width={48} />
       </div>
       <div className="footer-text">
         CREW
