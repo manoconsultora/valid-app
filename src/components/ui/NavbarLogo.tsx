@@ -20,6 +20,7 @@ export const NavbarLogo = ({
         priority
         src="/logo.png"
         style={{ height: '24px', width: 'auto' }}
+        unoptimized
         width={96}
       />
     </Link>

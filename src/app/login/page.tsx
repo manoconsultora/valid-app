@@ -77,10 +77,11 @@ export default function LoginPage() {
               priority
               src="/VALID_logo_app.png"
               style={{
-                width: '100%',
                 height: '100%',
                 objectFit: 'contain',
+                width: '100%',
               }}
+              unoptimized
               width={160}
             />
           </div>
@@ -90,10 +91,11 @@ export default function LoginPage() {
               height={80}
               src="/logo.png"
               style={{
-                width: '100%',
                 height: '100%',
                 objectFit: 'contain',
+                width: '100%',
               }}
+              unoptimized
               width={160}
             />
           </div>
