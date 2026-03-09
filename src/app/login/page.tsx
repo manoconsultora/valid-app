@@ -49,6 +49,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitError, setSubmitError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(
     () =>
@@ -66,17 +67,20 @@ export default function LoginPage() {
     void (async function submit() {
       e.preventDefault()
       setSubmitError('')
-      const result = await signIn(email.trim(), password)
+      setSuccessMessage('')
+      const trimmedEmail = email.trim().toLowerCase()
+      const trimmedPassword = password.trim()
+      const result = await signIn(trimmedEmail, trimmedPassword)
       if (result.error) {
         setSubmitError(result.error)
         return
       }
       if (result.user) {
         const r = result.user.role
-        if (r === 'admin') {
-          router.push('/admin')
-        } else if (r === 'provider') {
-          router.push('/proveedor')
+        if (r === 'admin' || r === 'provider') {
+          setSuccessMessage(`✅ Bienvenido/a ${result.user.name}!`)
+          const path = r === 'admin' ? '/admin' : '/proveedor'
+          setTimeout(() => router.push(path), 1000)
         } else {
           await signOut()
           setSubmitError(
@@ -91,6 +95,9 @@ export default function LoginPage() {
     })()
 
   const error = submitError || authError
+  const alertMessage = error || successMessage
+  const alertClass =
+    error ? 'alert-error' : successMessage ? 'alert-success' : ''
 
   return (
     <div className="login-page">
@@ -131,13 +138,10 @@ export default function LoginPage() {
         </div>
 
         <div
-          className={[
-            'alert',
-            error ? 'alert-error alert-visible' : '',
-          ].join(' ')}
-          role={error ? 'alert' : undefined}
+          className={['alert', alertClass, alertMessage ? 'alert-visible' : ''].join(' ')}
+          role={alertMessage ? 'alert' : undefined}
         >
-          {error}
+          {alertMessage}
         </div>
 
         <form onSubmit={handleSubmit}>

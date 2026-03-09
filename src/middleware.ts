@@ -18,7 +18,7 @@ async function handleMiddleware(request: NextRequest) {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) =>
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, options, value }) =>
             supabaseResponse.cookies.set(name, value, options)
           ),
       },
