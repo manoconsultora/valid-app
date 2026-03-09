@@ -1,0 +1,198 @@
+---
+description: Manejo de errores consistente — Supabase, fetch, Server Actions y UI
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Error handling
+
+Aplicar junto a `component-creation`. Define cómo manejar errores de forma consistente en toda la app.
+
+## Principio base
+
+- **Nunca silenciar errores** con `catch` vacíos o `console.log` sin relanzar.
+- **Separar errores esperados** (validación, not found, unauthorized) de **errores inesperados** (crashes, network failures).
+- **Services lanzan (`throw`)** — hooks y Server Actions capturan y deciden qué mostrar.
+- **UI nunca muestra stack traces** al usuario — mostrar mensajes amigables.
+
+---
+
+## En services (`src/services/`)
+
+Los services lanzan errores tipados. No retornan `null` ni `undefined` para indicar fallo.
+
+```ts
+// ✅ src/services/postsService.ts
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.types'
+
+export class NotFoundError extends Error {
+  constructor(resource: string) {
+    super(`${resource} not found`)
+    this.name = 'NotFoundError'
+  }
+}
+
+export async function getPost(supabase: SupabaseClient, id: string) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select()
+    .eq('id', id)
+    .single()
+
+  if (error?.code === 'PGRST116') throw new NotFoundError('Post')
+  if (error) throw new Error(error.message)
+
+  return data
+}
+```
+
+---
+
+## En Server Components y layouts
+
+Usar `notFound()` y `redirect()` de Next.js para errores de navegación. Para el resto, dejar que el `error.tsx` más cercano los capture.
+
+```tsx
+// ✅ src/app/posts/[id]/page.tsx
+import { notFound } from 'next/navigation'
+import { getPost } from '@/services/postsService'
+import { createServerClient } from '@/lib/supabase/server'
+import { NotFoundError } from '@/services/postsService'
+
+export default async function PostPage({ params }: { params: { id: string } }) {
+  const supabase = await createServerClient()
+
+  try {
+    const post = await getPost(supabase, params.id)
+    return <PostDetail post={post} />
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound()
+    throw error  // dejar que error.tsx lo capture
+  }
+}
+```
+
+---
+
+## En hooks (`src/hooks/`)
+
+Manejar estado de error explícito. No dejar errores sin capturar en `useEffect`.
+
+```ts
+// ✅ src/hooks/usePosts.ts
+"use client"
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { getPosts } from '@/services/postsService'
+import type { Post } from '@/types/domain.types'
+
+export function usePosts() {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    getPosts(supabase)
+      .then(setPosts)
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : 'Error desconocido')
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  return { error, loading, posts }
+}
+```
+
+---
+
+## En Server Actions
+
+Retornar objetos de resultado tipados — nunca lanzar directamente al cliente.
+
+```ts
+// ✅ src/app/posts/actions.ts
+"use server"
+import { createServerClient } from '@/lib/supabase/server'
+import { createPost } from '@/services/postsService'
+
+type ActionResult =
+  | { success: true; id: string }
+  | { success: false; error: string }
+
+export async function createPostAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const supabase = await createServerClient()
+    const post = await createPost(supabase, {
+      title: formData.get('title') as string,
+      content: formData.get('content') as string,
+    })
+    return { id: post.id, success: true }
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Error al crear el post',
+      success: false,
+    }
+  }
+}
+```
+
+---
+
+## `error.tsx` — error boundary por ruta
+
+```tsx
+// ✅ src/app/dashboard/error.tsx
+"use client"
+
+export default function DashboardError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  return (
+    <div>
+      <h2>Algo salió mal</h2>
+      <p>{error.message}</p>
+      <button onClick={reset}>Reintentar</button>
+    </div>
+  )
+}
+```
+
+---
+
+## Errores de Supabase — códigos comunes
+
+| Código | Significado | Acción recomendada |
+|---|---|---|
+| `PGRST116` | No rows found (`.single()`) | `throw new NotFoundError(...)` |
+| `23505` | Unique constraint violation | Mensaje al usuario: "ya existe" |
+| `42501` | RLS violation / sin permiso | `throw new UnauthorizedError(...)` |
+| `PGRST301` | JWT expirado | Redirigir a login |
+
+---
+
+## Reglas generales
+
+- **Tipar el `catch`**: usar `error instanceof Error` antes de acceder a `.message`. No asumir el tipo.
+- **No exponer mensajes internos** de Supabase o PostgreSQL directamente en la UI — mapearlos a mensajes amigables.
+- **Loggear en el servidor**, no en el cliente: usar `console.error` solo en server-side code; en producción reemplazar por un servicio de logging (Sentry, etc.).
+- **`finally` para cleanup**: siempre usar `finally` para `setLoading(false)`, cerrar conexiones, o limpiar estado.
+
+---
+
+## Resumen rápido
+
+| Contexto | Patrón |
+|---|---|
+| Service | `throw` errores tipados |
+| Server Component | `try/catch` → `notFound()` o re-throw |
+| Hook | `useState` para `error` + `.catch()` |
+| Server Action | Retornar `{ success, error }` |
+| UI de ruta | `error.tsx` con `reset()` |
+| Errores de Supabase | Mapear códigos a errores tipados propios |

@@ -1,0 +1,204 @@
+---
+description: Manejo de sesiones, protección de rutas y middleware con Supabase Auth en Next.js
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Auth patterns (Supabase + Next.js)
+
+## Principio base
+
+- **Servidor**: verificar sesión con `supabase.auth.getUser()` — nunca confiar en `getSession()` para decisiones de seguridad (puede estar desactualizada).
+- **Middleware**: refrescar el token en cada request para que la sesión no expire silenciosamente.
+- **Cliente**: usar `onAuthStateChange` para reaccionar a cambios de sesión en tiempo real.
+
+## Estructura de archivos de auth
+
+```
+src/
+├── lib/supabase/
+│   ├── client.ts         # createBrowserClient
+│   └── server.ts         # createServerClient (con cookies)
+├── middleware.ts          # Refresca token en cada request
+├── services/
+│   └── authService.ts    # signIn, signOut, signUp, getUser
+└── hooks/
+    └── useAuth.ts         # Estado de sesión en Client Components
+```
+
+## `middleware.ts` — obligatorio para sesiones SSR
+
+Refrescar el token en cada request. Sin esto, las cookies de sesión no se actualizan y el usuario queda deslogueado inesperadamente.
+
+```ts
+// src/middleware.ts
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // IMPORTANTE: no hacer lógica entre createServerClient y getUser
+  await supabase.auth.getUser()
+
+  return supabaseResponse
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+}
+```
+
+## `lib/supabase/server.ts`
+
+```ts
+import 'server-only'
+import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import type { Database } from '@/types/database.types'
+
+export async function createServerClient() {
+  const cookieStore = await cookies()
+
+  return createSupabaseServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+}
+```
+
+## `lib/supabase/client.ts`
+
+```ts
+import { createBrowserClient } from '@supabase/ssr'
+import type { Database } from '@/types/database.types'
+
+export function createClient() {
+  return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+```
+
+## `services/authService.ts`
+
+```ts
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+export async function performSignIn(
+  supabase: SupabaseClient,
+  email: string,
+  password: string
+) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  return data.user
+}
+
+export async function performSignOut(supabase: SupabaseClient) {
+  const { error } = await supabase.auth.signOut()
+  if (error) throw error
+}
+
+export async function getAuthUser(supabase: SupabaseClient) {
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error) throw error
+  return user
+}
+```
+
+## Protección de rutas en `layout.tsx`
+
+Verificar sesión en el layout del route group protegido, no en cada `page.tsx`:
+
+```tsx
+// src/app/(dashboard)/layout.tsx
+import { createServerClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()  // ✅ getUser, no getSession
+
+  if (!user) redirect('/login')
+
+  return <>{children}</>
+}
+```
+
+## `useAuth` hook — estado de sesión en client
+
+```ts
+// src/hooks/useAuth.ts
+"use client"
+import { useEffect, useState } from 'react'
+import type { User } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
+import { getAuthUser, performSignIn, performSignOut } from '@/services/authService'
+
+export function useAuth() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    getAuthUser(supabase).then(setUser).finally(() => setLoading(false))
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  return {
+    loading,
+    signIn: (email: string, password: string) => performSignIn(supabase, email, password),
+    signOut: () => performSignOut(supabase),
+    user,
+  }
+}
+```
+
+## Reglas de seguridad
+
+- **Siempre `getUser()`** para verificar sesión en el servidor — `getSession()` no valida el token con el servidor.
+- **Nunca confiar en el cliente** para decisiones de autorización — siempre verificar en Server Component, layout, o Route Handler.
+- **Variables de entorno**: `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` son públicas por diseño. El service role key (`SUPABASE_SERVICE_ROLE_KEY`) nunca debe tener el prefijo `NEXT_PUBLIC_` ni usarse en Client Components.
+- **RLS es la última línea de defensa** — activar en todas las tablas con datos de usuarios (ver regla `sql-scripts`).
+
+## Resumen rápido
+
+| Contexto | Cómo obtener sesión |
+|---|---|
+| Server Component / layout | `createServerClient()` → `getUser()` |
+| Client Component | `useAuth()` hook |
+| Route Handler | `createServerClient()` → `getUser()` |
+| Middleware | `createServerClient` con cookies de request |
+| Proteger ruta | `layout.tsx` del route group → `redirect('/login')` |

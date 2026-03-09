@@ -1,41 +1,30 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
-import { getSession } from '@/lib/session'
+import { useAuth } from '@/hooks/useAuth'
 
 /**
- * Redirige a /login, /admin o /proveedor según sesión (solo cliente).
+ * Sin user → /login; admin → /admin; provider → /proveedor; sin rol → signOut + /login (limpia localStorage).
  */
 export default function RedirectHome() {
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
+  const { loading, signOut, user } = useAuth()
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setMounted(true)
-    }, 0)
-    return () => {
-      clearTimeout(t)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!mounted) {
-      return
-    }
-    const session = getSession()
-    if (!session) {
-      router.replace('/login')
-      return
-    }
-    if (session.user.role === 'admin') {
-      router.replace('/admin')
-    } else {
-      router.replace('/proveedor')
-    }
-  }, [mounted, router])
+  useEffect(
+    () =>
+      loading
+        ? undefined
+        : !user
+          ? router.replace('/login')
+          : user.role === 'admin'
+            ? router.replace('/admin')
+            : user.role === 'provider'
+              ? router.replace('/proveedor')
+              : (void signOut().then(() => router.replace('/login')), undefined),
+    [loading, router, signOut, user]
+  )
 
   return (
     <div className="flex min-h-screen items-center justify-center">

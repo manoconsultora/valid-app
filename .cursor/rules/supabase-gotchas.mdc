@@ -1,0 +1,233 @@
+---
+description: Errores silenciosos y gotchas específicos de Supabase — roles, permisos, triggers sobre auth, RLS
+globs: "scripts/**/*.sql"
+alwaysApply: false
+---
+
+# Supabase gotchas — errores que no lanzan mensaje claro
+
+Esta regla cubre los errores más comunes al ejecutar scripts en Supabase que **no producen un error de sintaxis obvio** pero hacen que la app no funcione. Aplicar junto a `sql-scripts`.
+
+---
+
+## Roles en Supabase — quién es quién
+
+Supabase tiene roles fijos. Conocerlos evita el 80% de los problemas de permisos:
+
+| Rol | Quién lo usa | Puede acceder a `auth.*` |
+|---|---|---|
+| `postgres` | Owner de la DB, migrations, funciones privilegiadas | ✅ Sí |
+| `authenticated` | Usuarios logueados (Supabase Auth) | ❌ Solo lo que RLS permita |
+| `anon` | Usuarios no logueados | ❌ Solo lo que RLS permita |
+| `service_role` | Backend con service key (bypasea RLS) | ✅ Sí |
+| `supabase_auth_admin` | Interno de Supabase Auth | ✅ Sí (no usar directamente) |
+
+**Regla**: Las funciones que leen o escriben en `auth.users` deben correr como `postgres`, no como el usuario que las invoca.
+
+---
+
+## Trigger `handle_new_user` — el más roto de Supabase
+
+Este es el patrón más común y el que más falla. Cada vez que se crea este trigger, seguir este template exacto:
+
+```sql
+-- Paso 1: Función con SECURITY DEFINER y owner postgres
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER                    -- corre como su owner, no como el invocador
+SET search_path = public            -- evita ataques por search_path
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, avatar_url)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data->>'full_name',
+    NEW.raw_user_meta_data->>'avatar_url'
+  );
+  RETURN NEW;
+END;
+$$;
+
+-- Paso 2: Owner OBLIGATORIO — sin esto falla silenciosamente en Supabase
+ALTER FUNCTION public.handle_new_user() OWNER TO postgres;
+
+-- Paso 3: Trigger sobre auth.users
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
+
+### Por qué falla sin `OWNER TO postgres`
+
+El trigger se ejecuta en el contexto de `supabase_auth_admin` (el rol interno que maneja `auth.users`). Si la función no es owned por `postgres`, ese rol no tiene permiso para ejecutarla → el INSERT falla sin mensaje claro en la app.
+
+### Checklist para cualquier trigger sobre `auth.users`
+
+- [ ] La función tiene `SECURITY DEFINER`
+- [ ] La función tiene `SET search_path = public`
+- [ ] Después del `CREATE OR REPLACE FUNCTION` hay `ALTER FUNCTION ... OWNER TO postgres`
+- [ ] El trigger es `AFTER INSERT` (no `BEFORE`) para tener `NEW.id` ya confirmado
+- [ ] El trigger está sobre `auth.users`, no sobre `public.users`
+
+---
+
+## RLS — políticas que faltan silenciosamente
+
+### El problema más común: tabla bloqueada sin error
+
+```sql
+-- ❌ Esto bloquea TODAS las operaciones silenciosamente
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+-- (sin ninguna política → nadie puede leer ni escribir, sin error visible)
+```
+
+### Política de INSERT para funciones con SECURITY DEFINER
+
+Cuando `handle_new_user` (u otra función con `SECURITY DEFINER`) inserta en una tabla con RLS, necesita una política explícita para `postgres`:
+
+```sql
+-- Sin esto, handle_new_user no puede insertar en profiles
+-- aunque tenga SECURITY DEFINER
+CREATE POLICY "postgres full access"
+  ON public.profiles
+  TO postgres, service_role
+  USING (true)
+  WITH CHECK (true);
+```
+
+### Template completo de RLS para tabla de perfiles
+
+```sql
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- postgres y service_role pueden hacer todo (triggers y backend)
+DROP POLICY IF EXISTS "postgres full access" ON public.profiles;
+CREATE POLICY "postgres full access"
+  ON public.profiles
+  TO postgres, service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Usuarios autenticados ven su propio perfil
+DROP POLICY IF EXISTS "users can view own profile" ON public.profiles;
+CREATE POLICY "users can view own profile"
+  ON public.profiles
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = id);
+
+-- Usuarios autenticados actualizan su propio perfil
+DROP POLICY IF EXISTS "users can update own profile" ON public.profiles;
+CREATE POLICY "users can update own profile"
+  ON public.profiles
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+```
+
+---
+
+## Permisos de schema — GRANT obligatorio
+
+Supabase no otorga permisos de schema automáticamente. Si una función o rol no puede ver objetos de `public`:
+
+```sql
+-- Acceso al schema public para roles que lo necesiten
+GRANT USAGE ON SCHEMA public TO authenticated, anon, service_role;
+
+-- Permisos específicos por tabla
+GRANT SELECT ON public.profiles TO authenticated, anon;
+GRANT INSERT, UPDATE ON public.profiles TO authenticated;
+
+-- Para funciones que acceden a auth.*
+GRANT USAGE ON SCHEMA auth TO postgres;
+```
+
+---
+
+## Funciones que acceden a `auth.users` — template seguro
+
+Cualquier función que lea de `auth.users` (no solo triggers) necesita el mismo tratamiento:
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_user_email(user_id UUID)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  user_email TEXT;
+BEGIN
+  SELECT email INTO user_email
+  FROM auth.users
+  WHERE id = user_id;
+  RETURN user_email;
+END;
+$$;
+
+-- Siempre después de cualquier función que acceda a auth.*
+ALTER FUNCTION public.get_user_email(UUID) OWNER TO postgres;
+```
+
+---
+
+## Orden de ejecución dentro de un mismo script
+
+Cuando un script crea tabla + función + trigger + RLS, respetar este orden estricto:
+
+```sql
+-- 1. Tabla destino primero
+CREATE TABLE IF NOT EXISTS public.profiles ( ... );
+
+-- 2. Función (necesita que la tabla exista)
+CREATE OR REPLACE FUNCTION public.handle_new_user() ... ;
+ALTER FUNCTION public.handle_new_user() OWNER TO postgres;  -- inmediatamente después
+
+-- 3. Trigger (necesita que la función exista)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created ...;
+
+-- 4. RLS al final (necesita que la tabla exista)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "postgres full access" ON public.profiles;
+CREATE POLICY "postgres full access" ...;
+```
+
+---
+
+## Checklist de verificación antes de ejecutar en Supabase Studio
+
+### Si el script crea un trigger sobre `auth.users`
+- [ ] La función tiene `SECURITY DEFINER` + `SET search_path = public`
+- [ ] Hay `ALTER FUNCTION ... OWNER TO postgres` inmediatamente después del `CREATE OR REPLACE`
+- [ ] El trigger es `AFTER INSERT/UPDATE/DELETE`
+- [ ] La tabla destino tiene RLS con política que permite INSERT para `postgres`
+
+### Si el script habilita RLS en una tabla
+- [ ] Hay política para cada operación que la app necesita (SELECT, INSERT, UPDATE, DELETE)
+- [ ] Si hay triggers que escriben en esa tabla → hay política `TO postgres` con `WITH CHECK (true)`
+- [ ] Las políticas tienen `TO authenticated` o `TO anon` explícito
+- [ ] Cada política tiene `DROP POLICY IF EXISTS` antes para ser idempotente
+
+### Si el script crea funciones que acceden a `auth.*`
+- [ ] `SECURITY DEFINER` + `SET search_path = public`
+- [ ] `ALTER FUNCTION ... OWNER TO postgres` después del `CREATE OR REPLACE`
+- [ ] `GRANT USAGE ON SCHEMA auth TO postgres` si no estaba ya otorgado
+
+### Reporte final — incluir al final de cada script
+```sql
+-- ✅ VERIFICACIÓN SUPABASE
+-- Triggers sobre auth.users: [lista o "ninguno"]
+--   → SECURITY DEFINER: sí/no
+--   → OWNER TO postgres: sí/no
+-- RLS habilitado en: [lista tablas o "ninguna"]
+--   → Política para postgres/service_role: sí/no
+--   → Políticas para authenticated: [operaciones cubiertas]
+-- GRANTs aplicados: [lista o "ninguno"]
+-- Posibles problemas: [descripción o "ninguno"]
+```

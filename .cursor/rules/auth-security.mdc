@@ -1,0 +1,147 @@
+---
+description: Auditor de seguridad para auth — valida toda implementación relacionada con autenticación, roles y acceso
+globs: "**/*.{ts,tsx,sql}"
+alwaysApply: false
+---
+
+# Auth Security Auditor
+
+Antes de generar o modificar cualquier código relacionado con autenticación, sesiones, roles o acceso, actuar como **auditor de seguridad**. Revisar cada decisión contra esta lista. Si algo viola un principio, **no implementarlo** y explicar el riesgo antes de proponer la alternativa correcta.
+
+---
+
+## Principios no negociables
+
+### 1. Mínimo privilegio — nunca asumir hacia arriba
+
+Si falta información (rol nulo, sesión inválida, dato ausente), el acceso es **mínimo o nulo**. Nunca rellenar con un rol por defecto elevado.
+
+```ts
+// ❌ CRÍTICO — nunca hacer esto
+const role = user.role ?? 'admin'
+const role = user.role || 'provider'
+if (!role) grantAccess()
+
+// ✅ Correcto
+if (!role) redirect('/unauthorized')
+if (!role) return null
+if (!role) throw new UnauthorizedError()
+```
+
+```sql
+-- ❌ CRÍTICO — nunca en SQL
+IF user_role IS NULL THEN
+  user_role := 'admin';  -- escalada de privilegios silenciosa
+END IF;
+
+-- ✅ Correcto
+IF user_role IS NULL THEN
+  RAISE EXCEPTION 'user has no role assigned';
+END IF;
+```
+
+### 2. Verificación server-side siempre
+
+El cliente puede mentir. Nunca tomar decisiones de acceso basadas solo en datos del cliente.
+
+```ts
+// ❌ El JWT del cliente puede estar manipulado o desactualizado
+const role = session?.user?.user_metadata?.role
+
+// ✅ Siempre verificar contra public.users en el servidor
+const { data: profile } = await supabase
+  .from('users')
+  .select('role')
+  .eq('id', session.user.id)
+  .single()
+```
+
+### 3. Separación de identidad y autorización
+
+- `auth.users` → identidad (quién sos). Solo Supabase lo gestiona. No tocar.
+- `public.users` → autorización (qué podés hacer). La app lo lee para decidir acceso.
+- **Nunca** usar `raw_user_meta_data` de `auth.users` para decisiones de autorización — es mutable desde el cliente sin validación server-side.
+
+### 4. Fallar de forma segura
+
+Si hay un error al verificar el rol o la sesión, denegar acceso. Nunca conceder por defecto ante la duda.
+
+```ts
+// ❌ Error silencioso = acceso concedido
+try {
+  const role = await getRole(userId)
+  if (role === 'admin') grantAccess()
+} catch {
+  grantAccess() // ← error silencioso escala privilegios
+}
+
+// ✅ Error = denegar siempre
+try {
+  const role = await getRole(userId)
+  if (role !== 'admin') redirect('/unauthorized')
+} catch {
+  redirect('/unauthorized')
+}
+```
+
+### 5. RLS es la última línea de defensa, no la única
+
+RLS protege la base de datos, pero no reemplaza la verificación en middleware y Server Components. Ambas capas deben existir: middleware/layout verifica sesión y rol, RLS protege los datos.
+
+---
+
+## Patrones prohibidos — nunca generar esto
+
+| Patrón | Riesgo | Alternativa |
+|---|---|---|
+| `role ?? 'admin'` | Escalada de privilegios | Denegar si rol nulo |
+| `role \|\| 'provider'` | Acceso no autorizado | Denegar si rol nulo |
+| `if (!user) grantAccess()` | Bypass de auth | `redirect('/login')` |
+| `raw_user_meta_data.role` para autorizar | Mutable desde cliente | Leer de `public.users` |
+| `USING (true)` sin `TO` explícito | RLS abierta a todos | Especificar rol siempre |
+| `service_role` key en client components | Bypasea todo RLS | Solo en server/backend |
+| Comparar roles como strings sin tipo | Typos silenciosos | Usar el enum `app_role` |
+| `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY` | Bypasea RLS completo | Nunca prefijo NEXT_PUBLIC_ |
+| `IF role IS NULL THEN role := 'admin'` en SQL | Escalada silenciosa en DB | RAISE EXCEPTION |
+| Trigger que asigna rol elevado por provider | Confunde identidad con rol | Rol siempre nulo hasta asignación manual |
+
+---
+
+## Checklist de auditoría — ejecutar antes de entregar cualquier código de auth
+
+### Sesión y usuario
+- [ ] ¿Se usa `supabase.auth.getUser()` y no `getSession()` para verificar en servidor?
+- [ ] ¿El rol se lee de `public.users` y no de `user_metadata`?
+- [ ] ¿Hay manejo explícito de `user === null`? ¿Qué hace?
+- [ ] ¿Hay manejo explícito de `role === null`? ¿Qué hace?
+
+### Roles y acceso
+- [ ] ¿Algún fallback asume un rol elevado? (`?? 'admin'`, `|| 'provider'`) → **BLOQUEANTE**
+- [ ] ¿Las comparaciones de rol usan el tipo `app_role` y no strings sueltos?
+- [ ] ¿El acceso se deniega ante cualquier error en la verificación?
+- [ ] ¿Las rutas protegidas verifican rol en servidor (layout o middleware), no solo en cliente?
+
+### SQL / RLS
+- [ ] ¿Alguna función SQL asigna rol elevado como fallback? → **BLOQUEANTE**
+- [ ] ¿El trigger `handle_new_user` deja el rol en `NULL` o en el mínimo? ¿No asigna `admin` nunca?
+- [ ] ¿Las políticas RLS tienen `TO rol_específico` explícito?
+- [ ] ¿`USING (true)` está restringido a `TO postgres, service_role`?
+- [ ] ¿Las funciones con `SECURITY DEFINER` tienen `SET search_path = public`?
+
+### Variables de entorno
+- [ ] ¿`SUPABASE_SERVICE_ROLE_KEY` no tiene prefijo `NEXT_PUBLIC_`?
+- [ ] ¿No hay keys hardcodeadas en el código fuente?
+
+---
+
+## Respuesta ante violaciones detectadas
+
+Si se detecta un patrón prohibido o un ítem **BLOQUEANTE**:
+
+1. **No implementar** el código con la vulnerabilidad.
+2. **Explicar el riesgo concreto** — qué podría pasar si se explota.
+3. **Proponer la alternativa segura** antes de escribir una línea de código.
+
+Ejemplo de respuesta correcta:
+
+> ⚠️ **Riesgo detectado — escalada de privilegios**: asignar `'admin'` como rol por defecto cuando el rol es nulo permite que cualquier usuario sin perfil tenga acceso administrativo completo. Alternativa: si el rol es nulo, redirigir a `/unauthorized` y requerir asignación manual por un administrador.

@@ -10,16 +10,17 @@ import { EventCard } from '@/components/ui/EventCard'
 import { MetricCard } from '@/components/ui/MetricCard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useUser } from '@/hooks/useUser'
 import { VENUES } from '@/lib/constants'
 import { statusAdminToBadgeVariant } from '@/lib/event-utils'
 import { getEvents } from '@/lib/events-store'
-import { getSession } from '@/lib/session'
 import type { Event } from '@/types'
 
 export default function AdminDashboardPage() {
   const [events, setEvents] = useState<Event[]>([])
   const venueById = Object.fromEntries(VENUES.map((v) => [v.id, v]))
-  const userName = getSession()?.user?.name ?? ''
+  const { user } = useUser()
+  const userName = user?.name ?? ''
 
   useDocumentTitle('Panel de Control - VALID')
 
