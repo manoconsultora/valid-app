@@ -101,7 +101,13 @@ export default function ProveedorDashboardPage() {
               badgeTopLeft={
                 <Badge
                   className="px-[18px] py-2.5 text-xs font-bold shadow-(--shadow)"
-                  variant={event.statusProvider === 'Documentación Aprobada' ? 'success' : 'pending'}
+                  variant={
+                    event.statusProvider === 'Documentación Aprobada'
+                      ? 'success'
+                      : event.statusProvider === 'Documentación Rechazada'
+                        ? 'rejected'
+                        : 'pending'
+                  }
                 >
                   {event.statusProvider ?? 'Cargar Documentación'}
                 </Badge>
