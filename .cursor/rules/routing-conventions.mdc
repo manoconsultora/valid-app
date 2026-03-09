@@ -1,0 +1,151 @@
+---
+description: Convenciones de routing en Next.js App Router — nombres, layouts, loading, error boundaries
+globs: "app/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Routing conventions (Next.js App Router)
+
+## Estructura de carpetas en `app/`
+
+```
+app/
+├── (auth)/                  # Route group — no afecta la URL
+│   ├── login/
+│   │   └── page.tsx         # /login
+│   └── register/
+│       └── page.tsx         # /register
+├── (dashboard)/
+│   ├── layout.tsx           # Layout compartido del dashboard
+│   ├── dashboard/
+│   │   ├── page.tsx         # /dashboard
+│   │   ├── loading.tsx      # Skeleton del dashboard
+│   │   └── error.tsx        # Error boundary del dashboard
+│   └── settings/
+│       └── page.tsx         # /settings
+├── api/
+│   └── webhooks/
+│       └── route.ts         # /api/webhooks — Route Handler
+├── layout.tsx               # Root layout (obligatorio)
+└── not-found.tsx            # Página 404 global
+```
+
+## Archivos especiales y cuándo usarlos
+
+| Archivo | Propósito | Cuándo crearlo |
+|---|---|---|
+| `page.tsx` | UI de la ruta, pública | Siempre que la ruta sea navegable |
+| `layout.tsx` | Wrapper persistente entre rutas hijas | Cuando varias rutas comparten nav, sidebar, o contexto |
+| `loading.tsx` | Skeleton/spinner con Suspense automático | Siempre que `page.tsx` haga fetch async |
+| `error.tsx` | Error boundary de la ruta | En rutas con fetch o lógica que puede fallar |
+| `not-found.tsx` | UI para `notFound()` | En rutas con recursos que pueden no existir |
+| `route.ts` | API endpoint (Route Handler) | Para webhooks, endpoints propios, o rutas no-UI |
+| `template.tsx` | Como layout pero re-monta en navegación | Solo si necesitás re-montar en cada visita |
+
+## Convenciones de nombrado
+
+- **Carpetas de rutas**: kebab-case (`user-profile/`, `reset-password/`).
+- **Route groups**: entre paréntesis, descriptivos (`(auth)/`, `(dashboard)/`, `(marketing)/`). No afectan la URL.
+- **Segmentos dinámicos**: `[id]/`, `[slug]/`. Acceder con `params.id` / `params.slug`.
+- **Catch-all**: `[...slug]/` para múltiples segmentos. `[[...slug]]/` si es opcional.
+- **Archivos especiales**: siempre en minúscula (`page.tsx`, `layout.tsx`, `loading.tsx`).
+
+## `loading.tsx` — siempre que haya fetch async
+
+Crear `loading.tsx` al lado de cada `page.tsx` que haga fetch. Next.js lo envuelve automáticamente en `<Suspense>`.
+
+```tsx
+// app/dashboard/loading.tsx
+export default function DashboardLoading() {
+  return (
+    <div className="space-y-4">
+      <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+      <div className="h-32 animate-pulse rounded bg-muted" />
+    </div>
+  )
+}
+```
+
+## `error.tsx` — siempre `"use client"`
+
+Los error boundaries deben ser Client Components. Reciben `error` y `reset`.
+
+```tsx
+// app/dashboard/error.tsx
+"use client"
+
+export default function DashboardError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  return (
+    <div>
+      <p>Algo salió mal: {error.message}</p>
+      <button onClick={reset}>Reintentar</button>
+    </div>
+  )
+}
+```
+
+## `layout.tsx` — no re-fetches innecesarios
+
+Los layouts **no se re-renderizan** al navegar entre rutas hijas — aprovechar esto para fetching de datos compartidos (perfil de usuario, permisos).
+
+```tsx
+// app/(dashboard)/layout.tsx
+import { createServerClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  return <div className="dashboard-layout">{children}</div>
+}
+```
+
+## Route Handlers (`route.ts`)
+
+- Usar para webhooks (Supabase, Stripe, etc.), endpoints que no son UI, o cuando necesitás controlar headers/status directamente.
+- **No mezclar** `route.ts` y `page.tsx` en la misma carpeta.
+- Exportar funciones nombradas por método HTTP: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`.
+
+```ts
+// app/api/webhooks/supabase/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function POST(req: NextRequest) {
+  const body = await req.json()
+  // procesar webhook
+  return NextResponse.json({ received: true })
+}
+```
+
+## Protección de rutas
+
+Proteger en el `layout.tsx` del route group, no en cada `page.tsx`:
+
+```
+app/
+├── (auth)/          # Rutas públicas — redirigir si ya está logueado
+│   └── login/
+└── (dashboard)/     # Rutas protegidas — redirigir si NO está logueado
+    └── layout.tsx   # ← chequear sesión acá
+```
+
+## Resumen rápido
+
+| Necesito… | Archivo |
+|---|---|
+| Una página navegable | `page.tsx` |
+| Compartir nav/sidebar entre rutas | `layout.tsx` en el route group |
+| Mostrar algo mientras carga | `loading.tsx` |
+| Manejar errores de una ruta | `error.tsx` ("use client") |
+| Un endpoint de API | `app/api/.../route.ts` |
+| Agrupar rutas sin afectar URL | Carpeta `(nombre)/` |
+| Ruta con parámetro dinámico | Carpeta `[param]/` |

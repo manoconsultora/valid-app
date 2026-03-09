@@ -1,21 +1,20 @@
- 'use client'
+'use client'
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { loginDemo } from '@/lib/auth-demo'
-import { setSession } from '@/lib/session'
+import { useAuth } from '@/hooks/useAuth'
 import './login.css'
 
 type FormFieldProps = {
+  autoComplete: string
   id: string
   label: string
-  type: 'email' | 'password'
-  placeholder: string
-  autoComplete: string
-  value: string
   onChange: (_value: string) => void
+  placeholder: string
+  type: 'email' | 'password'
+  value: string
 }
 
 const FormField = ({
@@ -27,44 +26,71 @@ const FormField = ({
   type,
   value,
 }: FormFieldProps) => (
-    <div className="form-group">
-      <label className="form-label" htmlFor={id}>
-        {label}
-      </label>
-      <input
-        autoComplete={autoComplete}
-        className="form-input"
-        id={id}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required
-        type={type}
-        value={value}
-      />
-    </div>
-  );
+  <div className="form-group">
+    <label className="form-label" htmlFor={id}>
+      {label}
+    </label>
+    <input
+      autoComplete={autoComplete}
+      className="form-input"
+      id={id}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      required
+      type={type}
+      value={value}
+    />
+  </div>
+)
 
 export default function LoginPage() {
   const router = useRouter()
+  const { error: authError, loading, signIn, signOut, user } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [submitError, setSubmitError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    const user = loginDemo(email.trim(), password.trim())
-    if (!user) {
-      setError('❌ Email o contraseña incorrectos')
-      return
-    }
-    setSession(user)
-    if (user.role === 'admin') {
-      router.push('/admin')
-    } else {
-      router.push('/proveedor')
-    }
-  }
+  useEffect(
+    () =>
+      loading || !user
+        ? undefined
+        : user.role === 'admin'
+          ? router.replace('/admin')
+          : user.role === 'provider'
+            ? router.replace('/proveedor')
+            : (void signOut().then(() => router.replace('/login')), undefined),
+    [loading, router, signOut, user]
+  )
+
+  const handleSubmit = (e: React.FormEvent) =>
+    void (async function submit() {
+      e.preventDefault()
+      setSubmitError('')
+      const result = await signIn(email.trim(), password)
+      if (result.error) {
+        setSubmitError(result.error)
+        return
+      }
+      if (result.user) {
+        const r = result.user.role
+        if (r === 'admin') {
+          router.push('/admin')
+        } else if (r === 'provider') {
+          router.push('/proveedor')
+        } else {
+          await signOut()
+          setSubmitError(
+            'Tu cuenta está pendiente de activación. Contactá al administrador.'
+          )
+        }
+      } else {
+        setSubmitError(
+          result.error ?? 'No se pudo completar el acceso. Intenta de nuevo.'
+        )
+      }
+    })()
+
+  const error = submitError || authError
 
   return (
     <div className="login-page">
@@ -77,9 +103,9 @@ export default function LoginPage() {
               priority
               src="/VALID_logo_app.png"
               style={{
-                width: '100%',
                 height: '100%',
                 objectFit: 'contain',
+                width: '100%',
               }}
               width={160}
             />
@@ -90,9 +116,9 @@ export default function LoginPage() {
               height={80}
               src="/logo.png"
               style={{
-                width: '100%',
                 height: '100%',
                 objectFit: 'contain',
+                width: '100%',
               }}
               width={160}
             />

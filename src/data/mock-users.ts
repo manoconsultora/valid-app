@@ -1,10 +1,11 @@
 import type { User } from '@/types'
 
 /**
- * Usuarios demo (SOP). En fase 1 no hay auth real.
+ * Referencia para crear usuarios de prueba en Supabase (Auth + public.users).
+ * No se importa en la app; auth real vía useAuth / Supabase.
  */
 
-/*eslint-disable sort-keys -- keys are intentionally out of order for demo purposes */
+/* eslint-disable sort-keys -- keys are intentionally out of order for demo reference */
 
 export const MOCK_USERS: User[] = [
   {
@@ -19,7 +20,7 @@ export const MOCK_USERS: User[] = [
     email: 'proveedor@empresa.com',
     name: 'Proveedor Empresa',
     passwordHint: 'prov123',
-    role: 'proveedor',
+    role: 'provider',
    
   },
 ]

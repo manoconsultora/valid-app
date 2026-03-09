@@ -3,7 +3,7 @@
  * Sirven para Supabase y para respuestas de API.
  */
 
-export type Role = 'admin' | 'proveedor'
+export type Role = 'admin' | 'provider'
 
 export type EventStatusAdmin = 'ARMADO' | 'LIVE' | 'VALIDACIÓN'
 
@@ -31,12 +31,12 @@ export interface DbProviderCategory {
   name: string
 }
 
-/** users / profiles (app user, no auth) */
+/** users / profiles (app user, no auth). role NULL hasta asignación por admin (auth-rbac). */
 export interface DbUser {
   id: string
   email: string
   name: string
-  role: Role
+  role: Role | null
   created_at: string
   updated_at: string
 }

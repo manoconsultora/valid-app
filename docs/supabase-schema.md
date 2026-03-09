@@ -5,7 +5,7 @@ Modelo de datos para columnas y tablas en Supabase. Nombres en `snake_case`. PKs
 ## Enums
 
 ```sql
-CREATE TYPE app_role AS ENUM ('admin', 'proveedor');
+CREATE TYPE app_role AS ENUM ('admin', 'provider');
 
 CREATE TYPE event_status_admin AS ENUM ('ARMADO', 'LIVE', 'VALIDACIÓN');
 

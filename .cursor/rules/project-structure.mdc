@@ -1,0 +1,57 @@
+---
+description: Estructura de carpetas del proyecto y uso del cliente Supabase
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Estructura del proyecto
+
+## Cascada de reglas
+
+Esta regla define **dónde** van los archivos. Es complementaria: `component-creation` y `logic-placement` se aplican **dentro** de esta estructura. Crear o mover archivos aquí no exime de cumplir estilo/ESLint ni la colocación correcta (hooks vs services vs lib). Las tres reglas se cumplen a la vez; ninguna invalida a otra.
+
+```
+src/
+├── app/                        # Next.js App Router
+│   ├── (auth)/                 # Route groups
+│   ├── api/                    # Route Handlers
+│   └── layout.tsx
+│
+├── components/                 # Componentes UI
+│   ├── ui/                     # Primitivos (Button, Input, Modal…)
+│   └── [feature]/              # Componentes por dominio (auth/, dashboard/…)
+│
+├── hooks/                      # Custom hooks (solo client, usan React hooks)
+│   └── useAuth.ts
+│
+├── services/                   # Acceso a Supabase y APIs externas (sin estado React)
+│   └── authService.ts
+│
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts           # createBrowserClient → usar en Client Components
+│   │   └── server.ts           # createServerClient → usar en Server Components / Route Handlers
+│   ├── utils.ts                # Funciones puras: formatters, validators, calculators
+│   └── adapters/               # Mapean tipos de Supabase → tipos del dominio
+│
+├── types/                      # Tipos globales y tipos generados por Supabase
+│   ├── database.types.ts       # Auto-generado: `supabase gen types`
+│   └── domain.types.ts        # Tipos propios del negocio
+│
+└── constants/                  # Valores constantes globales
+```
+
+## Reglas rápidas
+
+| Archivo | Dónde importa el cliente Supabase |
+|---------|-----------------------------------|
+| `services/*.ts` | Recibe el cliente como argumento (no lo instancia) |
+| `app/api/**` / Server Components | `lib/supabase/server.ts` |
+| Client Components / hooks | `lib/supabase/client.ts` |
+
+## Notas
+
+- `services/` son funciones async puras de dominio: **no usan hooks, no instancian el cliente**. Reciben el cliente por parámetro para ser testeables y usables tanto en server como en client.
+- `hooks/` orquestan services + estado React. Solo se usan en Client Components.
+- `lib/adapters/` evitan que los tipos crudos de Supabase se filtren al resto de la app.
+- Correr `supabase gen types typescript` para mantener `database.types.ts` actualizado.

@@ -1,0 +1,148 @@
+---
+description: Cuándo usar Server vs Client Components en Next.js App Router
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Server vs Client Components (Next.js App Router)
+
+Aplicar junto a `component-creation` y `project-structure`. Define **dónde corre** cada componente y cómo evitar errores comunes de hidratación y bundle size.
+
+## Regla base
+
+**Por defecto, todo componente es Server Component.** Agregar `"use client"` solo cuando sea estrictamente necesario. Menos código en el bundle del cliente = mejor performance.
+
+## Cuándo es Server Component (sin `"use client"`)
+
+Usar Server Component cuando el componente:
+
+- Hace fetching de datos directamente (llama a `src/lib/supabase/server.ts`)
+- Accede a recursos del servidor (variables de entorno, fs, headers, cookies)
+- No necesita interactividad ni estado
+- Renderiza contenido estático o que cambia solo en el servidor
+- Es un layout, página, o contenedor de datos
+
+```tsx
+// ✅ src/app/dashboard/page.tsx — Server Component
+import { createServerClient } from '@/lib/supabase/server'
+
+export default async function DashboardPage() {
+  const supabase = await createServerClient()
+  const { data: posts } = await supabase.from('posts').select()
+
+  return <PostList posts={posts} />
+}
+```
+
+## Cuándo agregar `"use client"`
+
+Agregar `"use client"` **solo** cuando el componente:
+
+- Usa hooks de React (`useState`, `useEffect`, `useRef`, `useContext`, etc.)
+- Maneja eventos del usuario (`onClick`, `onChange`, `onSubmit`, etc.)
+- Usa APIs del browser (`window`, `localStorage`, `navigator`, etc.)
+- Usa librerías que dependen del DOM o no son compatibles con SSR
+- Necesita estado local o reactividad
+
+```tsx
+// ✅ src/components/ui/SearchInput.tsx — Client Component
+"use client"
+
+import { useState } from "react"
+
+export function SearchInput({ onSearch }: { onSearch: (q: string) => void }) {
+  const [value, setValue] = useState("")
+
+  return (
+    <input
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && onSearch(value)}
+      value={value}
+    />
+  )
+}
+```
+
+## Patrón: empujar `"use client"` hacia las hojas
+
+Mantener `"use client"` lo más cerca posible de los componentes interactivos — nunca en layouts ni páginas si se puede evitar.
+
+```tsx
+// ❌ Marca toda la página como client innecesariamente
+"use client"
+export default function Page() {
+  return (
+    <main>
+      <HeavyStaticContent />   {/* no necesita client */}
+      <LikeButton />           {/* este sí necesita client */}
+    </main>
+  )
+}
+
+// ✅ Solo el componente interactivo es client
+// src/app/posts/page.tsx — Server Component
+export default async function Page() {
+  return (
+    <main>
+      <HeavyStaticContent />
+      <LikeButton />   {/* "use client" dentro de LikeButton */}
+    </main>
+  )
+}
+```
+
+## Patrón: Server Component como contenedor de datos
+
+Fetchear datos en el Server Component y pasarlos como props al Client Component:
+
+```tsx
+// ✅ Server Component fetches, Client Component renderiza
+// src/app/profile/page.tsx
+export default async function ProfilePage() {
+  const supabase = await createServerClient()
+  const { data: profile } = await supabase.from('profiles').select().single()
+
+  return <ProfileForm initialData={profile} />  // ProfileForm es "use client"
+}
+```
+
+## Restricciones importantes
+
+| En Server Components | En Client Components |
+|---|---|
+| ✅ `async/await` directo | ❌ No `async` en el componente |
+| ✅ `lib/supabase/server.ts` | ✅ `lib/supabase/client.ts` |
+| ✅ Variables de entorno sin `NEXT_PUBLIC_` | ❌ Solo `NEXT_PUBLIC_*` |
+| ❌ Hooks de React | ✅ Hooks de React |
+| ❌ Event handlers | ✅ Event handlers |
+| ❌ `window`, `document` | ✅ APIs del browser |
+| ✅ Importar Server y Client Components | ⚠️ No puede importar Server Components |
+
+## Errores comunes a evitar
+
+- **No pasar funciones como props** de Server a Client Components — no son serializables.
+  ```tsx
+  // ❌
+  <ClientComponent onLoad={() => fetchData()} />
+
+  // ✅ Pasar datos, no funciones del servidor
+  <ClientComponent initialData={data} />
+  ```
+
+- **No importar código server-only en Client Components** — usar el paquete `server-only` en módulos que no deben llegar al cliente.
+  ```ts
+  // src/lib/supabase/server.ts
+  import 'server-only'
+  ```
+
+- **No usar `useEffect` para fetching inicial** si el dato puede venir del servidor como prop.
+
+## Resumen rápido
+
+| Necesita | Tipo |
+|---|---|
+| Fetch de datos, sin interactividad | Server Component |
+| Estado, eventos, hooks | Client Component (`"use client"`) |
+| Layout o página contenedora | Server Component |
+| Formulario, input, modal interactivo | Client Component |
+| Ambos (datos + interactividad) | Server fetches → pasa props a Client |

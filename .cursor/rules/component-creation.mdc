@@ -1,0 +1,50 @@
+---
+description: Reglas para crear componentes y hooks respetando ESLint y sin deshabilitar reglas
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Creación de componentes y hooks
+
+## Cascada de reglas
+
+Esta regla es la **base** (estilo y ESLint). Las reglas `logic-placement` y `project-structure` se aplican **además** de esta: al extraer código a hooks, services o lib, el resultado debe seguir cumpliendo ESLint y estas buenas prácticas. Ninguna otra regla exime de cumplir esta.
+
+## ESLint
+
+- **Respetar todas las reglas de ESLint** al crear o modificar componentes y hooks.
+- **No deshabilitar reglas** con comentarios (`// eslint-disable-next-line`, `/* eslint-disable */`). Resolver los avisos/errores refactorizando el código.
+- **Excepción única**: la regla **sort-keys** (y `sort-destructure-keys` / `react/jsx-sort-props` cuando apliquen) solo puede deshabilitarse cuando el orden de las claves es intencional y mejora la legibilidad (p. ej. agrupación lógica, orden de lectura). En ese caso, añadir un comentario breve que justifique el orden.
+
+## arrow-body-style (nunca deshabilitar)
+
+- El proyecto usa `arrow-body-style: 'never'`: las arrow functions deben tener cuerpo de expresión, no bloque `{ }`.
+- **No deshabilitar** `arrow-body-style` en callbacks async ni en hooks. Si un callback necesita varias sentencias o es async, **refactorizar**: extraer la lógica a una **función nombrada** y hacer que el callback sea una expresión que solo llame a esa función.
+- Ejemplo: en lugar de `useEffect(() => { async function run() { ... }; run() }, [])` o deshabilitar la regla, definir `function setupAuthListener() { ... return cleanup }` fuera del efecto y usar `useEffect(() => setupAuthListener(), [deps])`.
+
+## Hooks (useEffect, callbacks)
+
+- Evitar violar `no-use-before-define`: definir funciones auxiliares arriba o en el mismo scope antes de usarlas; no depender de hoisting.
+- Dependencias de `useEffect`/`useCallback`/`useMemo`: incluir todas las dependencias necesarias para no disparar re-renders innecesarios ni dejar stale closures.
+
+## Buenas prácticas al refactorizar
+
+- **sort-keys / sort-destructure-keys**: ordenar propiedades y claves de destructuración alfabéticamente (asc, natural). Si el orden actual tiene sentido semántico, considerar deshabilitar solo ese bloque con justificación en comentario.
+- **react/jsx-sort-props**: ordenar props de JSX alfabéticamente.
+- **import/order**: agrupar imports (builtin → external → internal → parent → sibling) con `newlines-between: 'always'` y alfabetizar.
+- **no-unused-vars / @typescript-eslint/no-unused-vars**: eliminar variables no usadas o prefijar con `_` si son requeridas por la firma.
+- **complexity / max-params**: extraer lógica a funciones auxiliares o custom hooks para reducir complejidad y número de parámetros.
+- **prefer-arrow**: usar arrow functions cuando la regla lo indique; si hace falta `this`, refactorizar para no depender de él.
+
+## Ejemplo de orden intencional (sort-keys)
+
+```tsx
+// Orden alfabético por defecto (respetar ESLint)
+const props = { a: 1, b: 2, label: 'x', value: 3 }
+
+// Solo si el orden agrupa conceptos y mejora lectura:
+// eslint-disable-next-line sort-keys -- orden: id/estado primero, datos después
+const state = { id: 1, status: 'ok', createdAt: '', updatedAt: '' }
+```
+
+Al crear componentes, revisar que el código pase `eslint` sin deshabilitaciones salvo la excepción documentada para sort-keys.

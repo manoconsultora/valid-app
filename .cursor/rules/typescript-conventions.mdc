@@ -1,0 +1,215 @@
+---
+description: Convenciones TypeScript — tipos estrictos, tipos de Supabase, evitar any
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript conventions
+
+Aplicar junto a `component-creation`. Define cómo usar TypeScript de forma estricta y consistente en todo el proyecto.
+
+## Config base (`tsconfig.json`)
+
+Asegurar estas opciones habilitadas:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}
+```
+
+---
+
+## Nunca usar `any`
+
+`any` desactiva TypeScript. Alternativas según el caso:
+
+```ts
+// ❌
+function process(data: any) { ... }
+
+// ✅ Si el tipo es realmente desconocido
+function process(data: unknown) {
+  if (typeof data === 'string') { ... }
+}
+
+// ✅ Si es un objeto con forma conocida
+function process(data: Record<string, string>) { ... }
+
+// ✅ Si es un genérico
+function process<T>(data: T): T { ... }
+```
+
+Si el tipo de una librería externa devuelve `any`, crear un wrapper con el tipo correcto en lugar de propagarlo.
+
+---
+
+## Tipos de Supabase
+
+Generar y mantener los tipos actualizados:
+
+```bash
+supabase gen types typescript --project-id <project-id> > src/types/database.types.ts
+```
+
+Usar los tipos generados como base y crear tipos de dominio en `src/types/domain.types.ts`:
+
+```ts
+// src/types/database.types.ts — auto-generado, no editar manualmente
+export type Database = { ... }
+
+// src/types/domain.types.ts — tipos del negocio
+import type { Database } from './database.types'
+
+// Extraer tipos de fila directamente
+type PostRow = Database['public']['Tables']['posts']['Row']
+type PostInsert = Database['public']['Tables']['posts']['Insert']
+type PostUpdate = Database['public']['Tables']['posts']['Update']
+
+// Tipos de dominio (pueden diferir del modelo de DB)
+export type Post = {
+  id: string
+  title: string
+  content: string
+  author: User
+  createdAt: Date     // camelCase en dominio, snake_case en DB
+  publishedAt: Date | null
+}
+```
+
+---
+
+## Adapters para convertir DB → dominio
+
+Nunca usar los tipos crudos de Supabase directamente en la UI. Usar adapters en `src/lib/adapters/`:
+
+```ts
+// src/lib/adapters/postAdapter.ts
+import type { Database } from '@/types/database.types'
+import type { Post } from '@/types/domain.types'
+
+type PostRow = Database['public']['Tables']['posts']['Row']
+
+export function toPost(row: PostRow): Post {
+  return {
+    id: row.id,
+    title: row.title,
+    content: row.content ?? '',
+    createdAt: new Date(row.created_at),
+    publishedAt: row.published_at ? new Date(row.published_at) : null,
+  }
+}
+```
+
+---
+
+## Props de componentes
+
+- Siempre tipar props explícitamente — no usar `React.FC<Props>`, preferir la firma directa.
+- Usar `interface` para props de componentes, `type` para uniones y tipos de dominio.
+
+```tsx
+// ❌
+const Button = ({ label, onClick }: any) => ...
+
+// ✅
+interface ButtonProps {
+  disabled?: boolean
+  label: string
+  onClick: () => void
+  variant?: 'primary' | 'secondary'
+}
+
+export function Button({ disabled = false, label, onClick, variant = 'primary' }: ButtonProps) {
+  ...
+}
+```
+
+---
+
+## `type` vs `interface`
+
+| Usar `type` | Usar `interface` |
+|---|---|
+| Uniones: `type Status = 'draft' \| 'published'` | Props de componentes |
+| Intersecciones | Tipos que pueden extenderse |
+| Tipos de dominio complejos | Contratos de servicios |
+| Aliases de tipos de DB | — |
+
+---
+
+## Tipos de retorno explícitos en services y utils
+
+Declarar el tipo de retorno en funciones públicas de `services/` y `lib/`:
+
+```ts
+// ✅ Tipo de retorno explícito
+export async function getPost(supabase: SupabaseClient, id: string): Promise<Post> {
+  ...
+}
+
+// ✅ En utils puros
+export function formatDate(date: string): string {
+  ...
+}
+```
+
+En hooks y componentes el tipo puede inferirse si es claro.
+
+---
+
+## Narrowing — no castear con `as`
+
+```ts
+// ❌ Casteo forzado sin verificar
+const user = data as User
+
+// ✅ Narrowing con type guard
+function isUser(data: unknown): data is User {
+  return typeof data === 'object' && data !== null && 'id' in data
+}
+
+if (isUser(data)) {
+  console.log(data.id)
+}
+
+// ✅ El único `as` aceptable: aserciones de non-null cuando se tiene certeza
+const btn = document.getElementById('btn') as HTMLButtonElement
+```
+
+---
+
+## Enums vs union types
+
+Preferir union types sobre enums — más simples, sin overhead en runtime:
+
+```ts
+// ❌ Enum
+enum Status { Draft = 'draft', Published = 'published' }
+
+// ✅ Union type
+type Status = 'draft' | 'published' | 'archived'
+
+// ✅ Si necesitás iterar los valores
+const STATUSES = ['draft', 'published', 'archived'] as const
+type Status = typeof STATUSES[number]
+```
+
+---
+
+## Resumen rápido
+
+| Regla | Acción |
+|---|---|
+| `any` | Reemplazar con `unknown`, genérico, o tipo concreto |
+| Tipos de DB | Generar con `supabase gen types`, no editar manualmente |
+| Tipos de UI | Crear en `domain.types.ts`, convertir con adapters |
+| Props | `interface`, firma directa (no `React.FC`) |
+| Casteos | Narrowing con type guards; evitar `as` |
+| Enums | Union types o `as const` arrays |
+| Retornos | Explícitos en services y utils públicos |

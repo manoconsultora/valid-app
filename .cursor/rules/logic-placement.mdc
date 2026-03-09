@@ -1,0 +1,126 @@
+---
+description: Cuándo extraer a hooks vs services vs utils (aplicar después de component-creation)
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Dónde poner la lógica: hooks vs services vs utils
+
+## Cascada de reglas
+
+Esta regla se aplica **después** de que el código cumpla `component-creation` (ESLint y estilo). Al extraer o mover código a hooks, services o lib: **no invalidar** `component-creation` — el código extraído debe seguir respetando ESLint, arrow-body-style y dependencias de hooks. Usar el mapa de carpetas de `project-structure`; no crear archivos fuera de esa estructura.
+
+Define **dónde** vive cada pieza de lógica. Ver `project-structure` para el mapa de carpetas.
+
+## Cuándo es un hook (`src/hooks/`)
+
+Extraer a **custom hook** (prefijo `use*`) cuando la lógica:
+
+- Usa al menos un hook de React (`useState`, `useEffect`, `useRef`, `useContext`, etc.), o
+- Depende del ciclo de vida (suscripciones, listeners, cleanup), o
+- Necesita estado o refs que persistan entre renders.
+
+> Regla: si la función **no puede** escribirse sin llamar a hooks, va en `src/hooks/`. Los hooks son **orquestadores**: llaman a services y manejan estado/efectos, no contienen lógica de dominio.
+
+```ts
+// ✅ src/hooks/useAuth.ts
+export function useAuth() {
+  const [user, setUser] = useState<User | null>(null)
+  const supabase = createBrowserClient()
+
+  useEffect(() => {
+    doInitialLoad(supabase).then(setUser)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const signIn = useCallback((email: string, password: string) =>
+    performSignIn(supabase, email, password), [])
+
+  return { user, signIn }
+}
+```
+
+## Cuándo es un service (`src/services/`)
+
+Extraer a **service** cuando la lógica:
+
+- Hace llamadas a **Supabase** o APIs externas, o
+- Contiene lógica de **dominio async** (autenticación, CRUD, queries), o
+- Necesita ser usada tanto en **server como en client** (Route Handlers + hooks), o
+- Debe ser **testeable sin render** (sin React, sin DOM).
+
+> Regla: si la función toca Supabase o una API externa pero **no usa hooks**, va en `src/services/`. Los services **reciben el cliente como parámetro** — no lo instancian internamente.
+
+```ts
+// ✅ src/services/authService.ts
+export async function performSignIn(
+  supabase: SupabaseClient,
+  email: string,
+  password: string
+) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  return data.user
+}
+
+export async function doInitialLoad(supabase: SupabaseClient) {
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+}
+```
+
+## Cuándo es util o adapter (`src/lib/`)
+
+Extraer a **util** o **adapter** cuando la lógica:
+
+- Es **pura** (mismo input → mismo output, sin efectos secundarios), o
+- Solo **transforma datos** (mapear, formatear, normalizar, validar), o
+- Hace **cálculos** derivados solo de sus argumentos, o
+- Es **reutilizable fuera de React** (testeable sin render, usable en Node/worker).
+
+> Regla: si la función **no toca Supabase, no usa hooks, y no tiene efectos**, va en `src/lib/`.
+
+```ts
+// ✅ src/lib/adapters/userAdapter.ts
+export function toUser(raw: Database['public']['Tables']['profiles']['Row']): User {
+  return {
+    id: raw.id,
+    name: raw.full_name ?? 'Anónimo',
+    avatarUrl: raw.avatar_url ?? null,
+  }
+}
+
+// ✅ src/lib/utils.ts
+export function formatDate(date: string) {
+  return new Intl.DateTimeFormat('es-AR').format(new Date(date))
+}
+```
+
+## Split dentro de un hook
+
+Si un custom hook tiene mucha lógica async o de dominio, extraer esa parte a `src/services/`:
+
+- El hook queda como **orquestador**: estado, efectos y callbacks.
+- Las funciones de dominio van en `services/` y reciben el cliente como argumento.
+
+## Cuándo extraer (umbrales concretos)
+
+Extraer lógica del componente/hook cuando:
+
+- El componente **supera 150 líneas**
+- La lógica se usa en **2 o más lugares**
+- Una función async supera **20 líneas** dentro de un hook
+
+## Resumen rápido
+
+| La lógica… | Ubicación |
+|------------|-----------|
+| Usa hooks o ciclo de vida React | `src/hooks/` (custom hook) |
+| Llama a Supabase o API externa, sin hooks | `src/services/` |
+| Es pura, transformación o cálculo | `src/lib/utils.ts` o `lib/adapters/` |
+| Hook con mucha lógica async/dominio | Hook delgado + funciones en `src/services/` |
+| Acceso al cliente Supabase en server | `src/lib/supabase/server.ts` |
+| Acceso al cliente Supabase en client | `src/lib/supabase/client.ts` |

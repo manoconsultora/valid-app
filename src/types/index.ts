@@ -2,7 +2,7 @@
  * Tipos globales VALID – Fase 1 (UI sin backend).
  */
 
-export type Role = 'admin' | 'proveedor'
+export type Role = 'admin' | 'provider'
 
 export type EventStatusAdmin = 'ARMADO' | 'LIVE' | 'VALIDACIÓN'
 
@@ -15,7 +15,8 @@ export interface User {
   id: string
   email: string
   name: string
-  role: Role
+  /** null = pendiente de asignación por admin; no conceder acceso (auth-rbac). */
+  role: Role | null
   /** Solo para demo; en fase 2 no se guarda en cliente. */
   passwordHint?: string
 }

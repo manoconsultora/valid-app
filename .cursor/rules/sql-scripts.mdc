@@ -1,0 +1,224 @@
+---
+description: Crear y mantener scripts SQL en scripts/ (orden de ejecución, normalización, buenas prácticas, no romper dependencias)
+globs: "scripts/**/*.sql"
+alwaysApply: false
+---
+
+# Scripts SQL (Supabase / PostgreSQL)
+
+Todos los scripts de creación de tablas, filas, triggers, RLS, etc. van en **`scripts/`**. El **orden de los archivos** es el **orden de ejecución**: nombrar con prefijo numérico y ejecutar en ese orden (ver `scripts/README.md`).
+
+## Ubicación y numeración
+
+- **Carpeta**: `scripts/` (raíz del proyecto).
+- **Nombre**: `NNN_descripcion_corta.sql` (tres dígitos, guión bajo, snake_case). Ejemplos: `001_app_role_enum.sql`, `005_new_table.sql`.
+- **Orden de ejecución**: Listar `scripts/*.sql`, tomar el mayor `NNN` y usar `NNN+1`. No reutilizar números; documentar en README si se elimina un script.
+- **README**: Actualizar `scripts/README.md` (tabla de orden) cada vez que se añada o quite un script.
+
+---
+
+## Diseño de tablas: normalización
+
+- **1NF**: Cada columna almacena un valor atómico. No arrays de strings, no columnas tipo `tag1, tag2, tag3`.
+  ```sql
+  -- ❌ No normalizado
+  CREATE TABLE posts (id UUID, tags TEXT);         -- "tech,news,ai"
+
+  -- ✅ Normalizado
+  CREATE TABLE tags (id UUID PRIMARY KEY, name TEXT NOT NULL UNIQUE);
+  CREATE TABLE post_tags (post_id UUID REFERENCES posts(id), tag_id UUID REFERENCES tags(id));
+  ```
+- **2NF / 3NF**: Evitar dependencias parciales o transitivas. Si un dato puede derivarse de otra tabla, no duplicarlo.
+  ```sql
+  -- ❌ Duplica datos
+  CREATE TABLE orders (id UUID, user_id UUID, user_email TEXT);
+
+  -- ✅ Referencia a la fuente de verdad
+  CREATE TABLE orders (id UUID, user_id UUID REFERENCES users(id));
+  ```
+- **Tablas de lookup**: Usar tablas separadas (o ENUMs) para categorías, estados, roles. No hardcodear strings en columnas sin restricción.
+
+---
+
+## Tipos de datos
+
+| Caso | Tipo correcto | Evitar |
+|---|---|---|
+| Primary key | `UUID DEFAULT gen_random_uuid()` | `SERIAL`, `BIGSERIAL` en tablas nuevas |
+| Fechas con zona horaria | `TIMESTAMPTZ` | `TIMESTAMP` (pierde zona) |
+| Texto sin límite conocido | `TEXT` | `VARCHAR(n)` arbitrario |
+| Dinero / precios | `NUMERIC(12,2)` | `FLOAT`, `REAL` (imprecisión) |
+| Flags booleanos | `BOOLEAN NOT NULL DEFAULT false` | `INTEGER` como booleano |
+| IDs externos (Supabase Auth) | `UUID REFERENCES auth.users(id)` | Guardar como `TEXT` |
+
+---
+
+## Constraints obligatorias
+
+Siempre declarar de forma explícita:
+
+- **`NOT NULL`** en columnas que nunca deben estar vacías.
+- **`DEFAULT`** en columnas con valor predecible (`gen_random_uuid()`, `now()`, `false`).
+- **`UNIQUE`** en columnas que funcionan como claves naturales (`email`, `slug`, `username`).
+- **`CHECK`** para validar rangos o valores permitidos:
+  ```sql
+  price NUMERIC(12,2) NOT NULL CHECK (price >= 0),
+  status TEXT NOT NULL CHECK (status IN ('draft', 'published', 'archived'))
+  ```
+- **Foreign keys explícitas** con acción definida:
+  ```sql
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+  ```
+
+---
+
+## Columnas de auditoría (en toda tabla nueva)
+
+Incluir siempre en tablas de dominio:
+
+```sql
+created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+```
+
+Y un trigger para `updated_at`:
+
+```sql
+-- Una vez definido, reutilizar en cada tabla
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS set_updated_at ON my_table;
+CREATE TRIGGER set_updated_at
+  BEFORE UPDATE ON my_table
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+```
+
+---
+
+## Soft delete (cuando aplique)
+
+Preferir soft delete sobre `DELETE` para datos que pueden necesitarse o auditarse:
+
+```sql
+deleted_at TIMESTAMPTZ DEFAULT NULL  -- NULL = activo, fecha = eliminado
+```
+
+Crear una vista para filtrar registros activos:
+
+```sql
+CREATE OR REPLACE VIEW active_posts AS
+  SELECT * FROM posts WHERE deleted_at IS NULL;
+```
+
+---
+
+## Índices
+
+Crear índices en:
+
+- **Foreign keys**: Supabase no los crea automáticamente.
+  ```sql
+  CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
+  ```
+- **Columnas usadas en `WHERE` frecuentes**: `status`, `deleted_at`, `created_at`.
+- **Columnas de búsqueda de texto**: Usar `GIN` con `pg_trgm` o `to_tsvector`.
+- **Columnas `UNIQUE`**: El constraint ya crea índice, no duplicar.
+
+No indexar columnas booleanas de baja cardinalidad (ej: `is_active` en tabla pequeña) — no mejoran la performance.
+
+---
+
+## RLS (Row Level Security) con Supabase Auth
+
+Habilitar RLS en **toda tabla con datos de usuarios**:
+
+```sql
+ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+```
+
+Patrones estándar con `auth.uid()`:
+
+```sql
+-- Solo el dueño puede ver sus filas
+CREATE POLICY "users can view own posts"
+  ON posts FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Solo el dueño puede insertar
+CREATE POLICY "users can insert own posts"
+  ON posts FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Solo el dueño puede actualizar
+CREATE POLICY "users can update own posts"
+  ON posts FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Solo el dueño puede eliminar
+CREATE POLICY "users can delete own posts"
+  ON posts FOR DELETE
+  USING (auth.uid() = user_id);
+```
+
+Reglas adicionales:
+- Nunca usar `USING (true)` en tablas con datos sensibles sin documentar el motivo.
+- Las funciones con `SECURITY DEFINER` deben incluir `SET search_path = public` para evitar ataques por search_path.
+- Definir políticas separadas por operación (SELECT / INSERT / UPDATE / DELETE), no una política genérica.
+
+---
+
+## Orden de dependencias
+
+1. ENUMs y tipos personalizados
+2. Tablas (de menos a más dependencias)
+3. Funciones que usan esas tablas
+4. Triggers
+5. RLS y políticas
+
+Los `NNN` deben reflejar este orden.
+
+---
+
+## No romper dependencias
+
+- **No eliminar ni renombrar** tipos, tablas o columnas que scripts posteriores o la app usan, sin añadir un script de migración.
+- **Al añadir un script**: Verificar (1) qué scripts previos necesita — documentarlo en la cabecera; (2) si algún script posterior depende de lo que este script crea — no alterar ese contrato de forma incompatible.
+- **Al modificar una columna**: Preferir `ADD COLUMN` + migración de datos + `DROP COLUMN` en pasos separados sobre `ALTER COLUMN` directo si hay datos en producción.
+
+---
+
+## Buenas prácticas generales
+
+- **Idempotencia**: `CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`, `DROP TRIGGER IF EXISTS` / `DROP POLICY IF EXISTS` antes de crear.
+- **Naming**: Todo en snake_case. Políticas y triggers con nombres descriptivos y únicos.
+- **Evitar**: `SELECT *` en funciones o vistas de producción; DROP de objetos compartidos sin migración documentada.
+
+---
+
+## Plantilla de cabecera
+
+```sql
+-- NNN_nombre_del_script.sql
+-- Orden: N (ejecutar tras NNN-1_...).
+-- Requiere: 001_xxx, 002_yyy
+-- Descripción: qué crea o modifica este script.
+```
+
+---
+
+## Resumen rápido
+
+| Acción | Regla |
+|---|---|
+| Crear tabla nueva | `NNN+1`, columnas de auditoría, constraints explícitas, índices en FKs |
+| Tipos de datos | UUID para PKs, TIMESTAMPTZ, TEXT, NUMERIC para dinero |
+| Normalización | Sin duplicar datos; tablas de lookup para catálogos |
+| Soft delete | `deleted_at TIMESTAMPTZ` + vista de activos |
+| RLS | Habilitar en toda tabla de usuario; políticas con `auth.uid()` por operación |
+| No romper dependencias | Respetar orden tipos → tablas → funciones → triggers → RLS; migración para cambios destructivos |

@@ -2,8 +2,15 @@
  * Adaptadores DB/API (snake_case) → tipos de app (camelCase).
  */
 
-import type { Event, Provider } from '@/types'
-import type { DbEvent, DbEventProvider, DbProvider } from '@/types/db'
+import type { Event, Provider, User } from '@/types'
+import type { DbEvent, DbEventProvider, DbProvider, DbUser } from '@/types/db'
+
+export const dbUserToApp = (db: DbUser): User => ({
+  email: db.email,
+  id: db.id,
+  name: db.name,
+  role: db.role,
+})
 
 export const dbProviderToApp = (db: DbProvider): Provider => ({
     categoryId: db.category_id,

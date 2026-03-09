@@ -8,7 +8,7 @@ Documento breve sobre mocks, estructura de datos y endpoints esperados para la F
 
 - **Eventos**: `src/data/mock-events.ts` (inicial) + `src/lib/events-store.ts` (localStorage `valid_events`). Alta desde Admin → Crear evento.
 - **Proveedores**: `src/data/mock-providers.ts` (inicial) + `src/lib/providers-store.ts` (localStorage `valid_providers`). Alta desde Admin → Proveedores.
-- **Usuarios demo**: `src/data/mock-users.ts`. Login en `src/lib/auth-demo.ts`; sesión en `src/lib/session.ts` (localStorage `valid_session`).
+- **Auth**: Supabase Auth + perfiles en `public.users`. Cliente en `src/lib/supabase/client.ts`; hooks `useAuth` y `useUser` en `src/hooks/`. Ver `docs/supabase-auth.md`. Referencia de usuarios demo en `src/data/mock-users.ts`.
 - **Constantes**: venues y categorías en `src/lib/constants.ts`.
 
 ---
@@ -17,7 +17,7 @@ Documento breve sobre mocks, estructura de datos y endpoints esperados para la F
 
 | Entidad    | Campos principales |
 |-----------|---------------------|
-| **User**  | id, email, name, role (admin \| proveedor) |
+| **User**  | id, email, name, role (admin \| provider) |
 | **Event** | id, name, date, venueId, timeRange, description, flyerUrl?, protocolUrl?, protocolNotes?, providerIds[], statusAdmin (ARMADO \| LIVE \| VALIDACIÓN), statusProvider?, isNew?, rejectionReason? |
 | **Provider** | id, razonSocial, cuit, categoryId, email, phone, contactName, contactRole |
 | **Venue** | id, name, city (CABA \| Córdoba) |
@@ -45,7 +45,9 @@ A continuación, la capa front esperaría estos recursos (reemplazando stores y 
 
 ---
 
-## 4. Credenciales demo (Fase 1)
+## 4. Credenciales demo
+
+Crear en Supabase (Auth y fila en `public.users` con el role correspondiente). Referencia: `src/data/mock-users.ts`.
 
 - **Admin**: admin@productora.com / admin123  
 - **Proveedor**: proveedor@empresa.com / prov123  

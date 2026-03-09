@@ -1,0 +1,288 @@
+---
+description: RBAC para roles admin y provider — cómo verificar roles, proteger rutas y manejar usuarios sin rol
+globs: "**/*.{ts,tsx,sql}"
+alwaysApply: false
+---
+
+# Auth RBAC — roles admin | provider
+
+Esta regla define el modelo de roles de la app y cómo implementarlo correctamente. Aplicar junto a `auth-security` (que actúa como auditor) y `auth-patterns`.
+
+---
+
+## Modelo de roles
+
+```
+app_role (enum en PostgreSQL)
+├── admin     → acceso total, gestiona usuarios y proveedores
+└── provider  → acceso a su propio panel y datos
+```
+
+### Dónde vive el rol
+
+| Tabla | Qué contiene | Quién lo toca |
+|---|---|---|
+| `auth.users` | Identidad, sesión, JWT | Solo Supabase Auth |
+| `public.users` | Perfil + `role app_role` | La app lo lee, admin lo escribe |
+
+**Nunca leer el rol de `raw_user_meta_data`** — leer siempre de `public.users`.
+
+---
+
+## SQL — definición del enum y tabla
+
+```sql
+-- Enum de roles (debe existir antes que public.users)
+DO $$ BEGIN
+  CREATE TYPE app_role AS ENUM ('admin', 'provider');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Tabla de usuarios/perfiles
+CREATE TABLE IF NOT EXISTS public.users (
+  id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email       TEXT NOT NULL,
+  name        TEXT,
+  role        app_role,                    -- NULL hasta asignación manual por admin
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+### Trigger `handle_new_user` — rol siempre NULL al crear
+
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.users (id, email, name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data->>'full_name',
+    NULL    -- ✅ rol NULL siempre — nunca asumir rol en el trigger
+  );
+  RETURN NEW;
+END;
+$$;
+
+ALTER FUNCTION public.handle_new_user() OWNER TO postgres;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
+
+> ⚠️ El trigger **nunca** debe asignar `'admin'` ni `'provider'` automáticamente. El rol lo asigna un admin manualmente después del registro.
+
+### Asignación de rol — solo por admin
+
+```sql
+-- Función para que un admin asigne rol a un usuario
+CREATE OR REPLACE FUNCTION public.assign_user_role(
+  target_user_id UUID,
+  new_role app_role
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  caller_role app_role;
+BEGIN
+  -- Verificar que quien llama es admin
+  SELECT role INTO caller_role
+  FROM public.users
+  WHERE id = auth.uid();
+
+  IF caller_role IS DISTINCT FROM 'admin'::app_role THEN
+    RAISE EXCEPTION 'only admins can assign roles';
+  END IF;
+
+  UPDATE public.users
+  SET role = new_role, updated_at = now()
+  WHERE id = target_user_id;
+END;
+$$;
+
+ALTER FUNCTION public.assign_user_role(UUID, app_role) OWNER TO postgres;
+```
+
+---
+
+## RLS — políticas por rol
+
+```sql
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- postgres y service_role: acceso total (triggers y backend)
+DROP POLICY IF EXISTS "postgres full access on users" ON public.users;
+CREATE POLICY "postgres full access on users"
+  ON public.users
+  TO postgres, service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- admin: ve todos los usuarios
+DROP POLICY IF EXISTS "admin can view all users" ON public.users;
+CREATE POLICY "admin can view all users"
+  ON public.users
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.users
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- provider: solo ve su propio perfil
+DROP POLICY IF EXISTS "provider can view own profile" ON public.users;
+CREATE POLICY "provider can view own profile"
+  ON public.users
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = id);
+
+-- Cualquier usuario autenticado puede actualizar su propio perfil (excepto el rol)
+DROP POLICY IF EXISTS "users can update own profile" ON public.users;
+CREATE POLICY "users can update own profile"
+  ON public.users
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = id)
+  WITH CHECK (
+    auth.uid() = id
+    AND role = (SELECT role FROM public.users WHERE id = auth.uid())  -- no puede cambiar su propio rol
+  );
+```
+
+---
+
+## TypeScript — tipos y verificación de roles
+
+```ts
+// src/types/domain.types.ts
+export type AppRole = 'admin' | 'provider'
+
+export type UserProfile = {
+  id: string
+  email: string
+  name: string | null
+  role: AppRole | null   // null = sin rol asignado
+}
+```
+
+### Helper de verificación de rol — server side
+
+```ts
+// src/lib/auth/roles.ts
+import 'server-only'
+import { createServerClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import type { AppRole } from '@/types/domain.types'
+
+export async function getUserRole(): Promise<AppRole | null> {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return null
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  return profile?.role ?? null   // null si no tiene rol — nunca asumir
+}
+
+// Proteger rutas que requieren un rol específico
+export async function requireRole(role: AppRole): Promise<void> {
+  const userRole = await getUserRole()
+
+  if (!userRole) redirect('/unauthorized')           // sin rol → sin acceso
+  if (userRole !== role) redirect('/unauthorized')   // rol incorrecto → sin acceso
+}
+
+// Proteger rutas que requieren estar logueado (cualquier rol)
+export async function requireAuth(): Promise<void> {
+  const userRole = await getUserRole()
+  if (!userRole) redirect('/unauthorized')
+}
+```
+
+---
+
+## Protección de rutas por rol
+
+```tsx
+// src/app/(admin)/layout.tsx — rutas solo para admin
+import { requireRole } from '@/lib/auth/roles'
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await requireRole('admin')   // redirige si no es admin — nunca asumir
+  return <>{children}</>
+}
+
+// src/app/(provider)/layout.tsx — rutas solo para provider
+import { requireRole } from '@/lib/auth/roles'
+
+export default async function ProviderLayout({ children }: { children: React.ReactNode }) {
+  await requireRole('provider')
+  return <>{children}</>
+}
+```
+
+---
+
+## Usuario sin rol — flujo correcto
+
+```
+Usuario se registra
+      ↓
+Trigger crea fila en public.users con role = NULL
+      ↓
+Usuario intenta acceder a cualquier ruta protegida
+      ↓
+requireRole() o requireAuth() detecta role = NULL
+      ↓
+redirect('/unauthorized')  ← nunca conceder acceso
+      ↓
+Admin asigna rol manualmente desde panel de administración
+      ↓
+Usuario puede acceder a las rutas de su rol
+```
+
+Página `/unauthorized`:
+
+```tsx
+// src/app/unauthorized/page.tsx
+export default function UnauthorizedPage() {
+  return (
+    <main>
+      <h1>Sin acceso</h1>
+      <p>Tu cuenta está pendiente de activación. Contactá al administrador.</p>
+    </main>
+  )
+}
+```
+
+---
+
+## Resumen de reglas de oro
+
+| Situación | Acción correcta |
+|---|---|
+| `role === null` en cualquier contexto | Denegar acceso, redirect a `/unauthorized` |
+| Trigger `handle_new_user` | Insertar con `role = NULL` siempre |
+| Asignar rol | Solo función `assign_user_role` llamada por un `admin` |
+| Leer rol para autorizar | Siempre de `public.users`, nunca de `user_metadata` |
+| Fallback de rol en código | **Prohibido** — si no hay rol, no hay acceso |
+| Comparar roles | Usar tipo `AppRole`, nunca strings sueltos |
