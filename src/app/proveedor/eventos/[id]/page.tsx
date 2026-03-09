@@ -113,7 +113,13 @@ export default function ProveedorEventoPage() {
   const statusLabel =
     event.statusProvider ?? 'Cargar Documentación'
   const isApproved = event.statusProvider === 'Documentación Aprobada'
+  const isRejected = event.statusProvider === 'Documentación Rechazada'
   const timeRangeParts = event.timeRange?.split(' - ') ?? ['—', '—']
+  const badgeVariant = isApproved
+    ? 'success'
+    : isRejected
+      ? 'rejected'
+      : 'pending'
 
   return (
     <div className="dashboard-container">
@@ -139,31 +145,31 @@ export default function ProveedorEventoPage() {
           }
         >
           <Badge
-            className="event-status-overlay"
-            variant={isApproved ? 'success' : 'pending'}
+            className={`event-status-overlay ${isRejected ? 'status-rechazado' : ''}`}
+            variant={badgeVariant}
           >
-            {statusLabel}
+            {isRejected ? '🔴 Documentación Rechazada' : statusLabel}
           </Badge>
         </div>
         <div className="event-hero-content">
           <h1 className="event-title">{event.name}</h1>
           <div className="event-info">
             <div className="info-row">
-              <span>📅</span>
+              <span className="info-icon">📅</span>
               <span>
                 {event.dateDisplay ?? event.date}
                 {venue?.city ? ` • ${venue.city}` : ''}
               </span>
             </div>
             <div className="info-row">
-              <span>📍</span>
+              <span className="info-icon">📍</span>
               <span>
                 {venue?.name ?? event.venueId}
                 {venue?.city ? ` • ${venue.city}` : ''}
               </span>
             </div>
             <div className="info-row">
-              <span>🕐</span>
+              <span className="info-icon">🕐</span>
               <span>
                 Apertura: {timeRangeParts[0]}hs • Show: {timeRangeParts[1]}hs
               </span>
@@ -173,43 +179,213 @@ export default function ProveedorEventoPage() {
       </div>
 
       <div className="validation-section">
-        <div className="section-header">
-          <div className="section-title">Estado de Validación</div>
-          <Badge variant="accent">2 Validaciones</Badge>
-        </div>
-
-        <ValidationCard
-          description={
-            <>
-              Validación de documentación de seguros de{' '}
-              {provider?.razonSocial ?? 'tu empresa'} contra el protocolo del
-              evento
-            </>
-          }
-          details={[
-            { label: 'Documentos Subidos', value: `${docsWithFilesCount} / 7` },
-            { label: 'Protocolo', value: 'Disponible' },
-          ]}
-          icon="📄"
-          name="Documentos Corporativos"
-          onClick={() => setModalA(true)}
-          type="Validación A"
-        />
-
-        <ValidationCard
-          description="Validación de empleados del evento contra documentos corporativos de Validación A"
-          details={[
-            {
-              label: 'Documentos Subidos',
-              value: `${excelFile ? '1' : '0'} / 1`,
-            },
-            { label: 'Validación contra', value: '7 docs corporativos' },
-          ]}
-          icon="👥"
-          name="Empleados del Evento"
-          onClick={() => setModalB(true)}
-          type="Validación B"
-        />
+        {isRejected ? (
+          <>
+            <div className="alert-box">
+              <div className="alert-icon">⚠️</div>
+              <div className="alert-content">
+                <div className="alert-title">Acción Requerida</div>
+                <div className="alert-message">
+                  {event.rejectionReason ??
+                    '1 empleado no cuenta con cobertura ART. Corregir y re-enviar documentación.'}
+                </div>
+              </div>
+            </div>
+            <div className="section-header">
+              <div className="section-title">Resultados de Validación</div>
+              <Badge variant="accent">2 Validaciones</Badge>
+            </div>
+            <ValidationCard
+              description={
+                <>
+                  Validación de documentación de seguros de{' '}
+                  {provider?.razonSocial ?? 'tu empresa'} contra el protocolo
+                  del evento
+                </>
+              }
+              details={[
+                { label: 'Documentos Validados', value: '8 / 8 PDFs' },
+                { label: 'Validado el', value: '28 Oct, 14:23' },
+              ]}
+              icon="📄"
+              name="Documentos Corporativos"
+              resultText={
+                <>
+                  • Pólizas ART vigentes
+                  <br />
+                  • Montos mínimos cumplidos ($50M muerte, $10M gastos)
+                  <br />
+                  • Beneficiarios correctos (POPART Music)
+                  <br />
+                  • Cláusulas de no repetición presentes
+                  <br />• Certificado F931 válido
+                </>
+              }
+              resultTitle="✓ Empresa cumple los requisitos"
+              status="✓ Aprobado"
+              statusClassName="status-approved"
+              type="Validación A"
+            />
+            <ValidationCard
+              description="Cross-check de empleados del evento contra nómina ART corporativa"
+              details={[
+                { label: 'Excel Procesado', value: '17 empleados' },
+                { label: 'Validado el', value: '28 Oct, 14:24' },
+              ]}
+              icon="👥"
+              name="Empleados del Evento"
+              resultClassName="rejected"
+              resultText={
+                <>
+                  16 empleados fueron validados correctamente.
+                  <br />
+                  1 empleado NO figura en la nómina ART de{' '}
+                  {provider?.razonSocial ?? 'tu empresa'}.
+                </>
+              }
+              resultTitle="✗ 1 empleado no cuenta con seguro"
+              resultTitleClassName="rejected"
+              status="✗ Rechazado"
+              statusClassName="status-rejected"
+              type="Validación B"
+            >
+              <div className="employees-section">
+                <div className="employees-header">
+                  Empleados sin cobertura ART:
+                </div>
+                <div className="employee-item">
+                  <div className="employee-avatar">PL</div>
+                  <div className="employee-info">
+                    <div className="employee-name">Pedro López</div>
+                    <div className="employee-dni">
+                      DNI 99.887.766 • CUIL 20-99887766-3
+                    </div>
+                  </div>
+                  <div className="employee-reason">No figura en nómina</div>
+                </div>
+              </div>
+              <button
+                className="action-button"
+                onClick={() => setModalB(true)}
+                type="button"
+              >
+                🔄 Corregir y Re-enviar
+              </button>
+            </ValidationCard>
+          </>
+        ) : isApproved ? (
+          <>
+            <div className="success-box">
+              <div className="success-icon">✅</div>
+              <div className="success-title">¡Proveedor Autorizado!</div>
+              <div className="success-message">
+                Toda la documentación ha sido validada correctamente. Tu equipo
+                puede trabajar en este evento.
+              </div>
+            </div>
+            <div className="section-header">
+              <div className="section-title">Resultados de Validación</div>
+              <Badge variant="accent">2 Validaciones</Badge>
+            </div>
+            <ValidationCard
+              description={
+                <>
+                  Validación de documentación de seguros de{' '}
+                  {provider?.razonSocial ?? 'tu empresa'} contra el protocolo
+                  del evento
+                </>
+              }
+              details={[
+                { label: 'Documentos Validados', value: '8 / 8 PDFs' },
+                { label: 'Validado el', value: '04 Oct, 11:15' },
+              ]}
+              icon="📄"
+              name="Documentos Corporativos"
+              resultText={
+                <>
+                  • Pólizas ART vigentes hasta 31/12/2025
+                  <br />
+                  • Montos mínimos cumplidos ($50M muerte, $10M gastos)
+                  <br />
+                  • Beneficiarios correctos (POPART Music)
+                  <br />
+                  • Cláusulas de no repetición presentes
+                  <br />• Certificado F931 válido
+                </>
+              }
+              resultTitle="✓ Empresa cumple los requisitos"
+              status="✓ Aprobado"
+              statusClassName="status-approved"
+              type="Validación A"
+            />
+            <ValidationCard
+              description="Cross-check de empleados del evento contra nómina ART corporativa"
+              details={[
+                { label: 'Excel Procesado', value: '12 empleados' },
+                { label: 'Validado el', value: '04 Oct, 11:16' },
+              ]}
+              icon="👥"
+              name="Empleados del Evento"
+              resultText={
+                <>
+                  • 12 empleados validados correctamente
+                  <br />
+                  • Todos figuran en nómina ART de{' '}
+                  {provider?.razonSocial ?? 'tu empresa'}
+                  <br />
+                  • Coberturas vigentes al día del evento
+                  <br />• Datos personales coinciden (DNI, CUIL, nombre)
+                </>
+              }
+              resultTitle="✓ Todos los empleados están en condiciones de ser acreditados"
+              status="✓ Aprobado"
+              statusClassName="status-approved"
+              summaryStats={{ approved: 12, rejected: 0 }}
+              type="Validación B"
+            />
+          </>
+        ) : (
+          <>
+            <div className="section-header">
+              <div className="section-title">Estado de Validación</div>
+              <Badge variant="accent">2 Validaciones</Badge>
+            </div>
+            <ValidationCard
+              description={
+                <>
+                  Validación de documentación de seguros de{' '}
+                  {provider?.razonSocial ?? 'tu empresa'} contra el protocolo del
+                  evento
+                </>
+              }
+              details={[
+                {
+                  label: 'Documentos Subidos',
+                  value: `${docsWithFilesCount} / 7`,
+                },
+                { label: 'Protocolo', value: 'Disponible' },
+              ]}
+              icon="📄"
+              name="Documentos Corporativos"
+              onClick={() => setModalA(true)}
+              type="Validación A"
+            />
+            <ValidationCard
+              description="Validación de empleados del evento contra documentos corporativos de Validación A"
+              details={[
+                {
+                  label: 'Documentos Subidos',
+                  value: `${excelFile ? '1' : '0'} / 1`,
+                },
+                { label: 'Validación contra', value: '7 docs corporativos' },
+              ]}
+              icon="👥"
+              name="Empleados del Evento"
+              onClick={() => setModalB(true)}
+              type="Validación B"
+            />
+          </>
+        )}
       </div>
 
       {otherEvents.length > 0 && (

@@ -91,7 +91,7 @@ export const DB_EVENTS: DbEvent[] = [
     protocol_notes: null,
     protocol_url: null,
     status_admin: 'ARMADO',
-    status_provider: 'Cargar Documentación',
+    status_provider: 'Documentación Rechazada',
     time_range: '20:00 - 00:00',
     venue_id: 'river',
     created_at: now,
