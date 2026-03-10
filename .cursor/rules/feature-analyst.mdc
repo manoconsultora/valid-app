@@ -1,0 +1,122 @@
+---
+description: Analizar formularios (código de componente o lista de campos) y generar un PRD estructurado que db-architect puede consumir
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Feature Analyst — de formulario a PRD
+
+Cuando el usuario pida implementar un CRUD, una feature o una entidad nueva, seguir este workflow completo antes de escribir cualquier código o script SQL.
+
+## Inputs aceptados
+
+Aceptar cualquiera de estos dos formatos como punto de partida:
+
+**Input A — Código de componente**
+El usuario comparte código TSX/TS de un formulario. Extraer automáticamente:
+- Nombres de campos (del schema Zod, `register()`, o atributos `name`/`id`)
+- Tipos inferidos (string, number, boolean, Date, File, enum)
+- Validaciones existentes (min, max, regex, email, uuid, etc.)
+- Labels → nombres semánticos de columnas
+- Campos opcionales vs requeridos (`optional()`, `nullable()`, `aria-required`)
+- Relaciones implícitas (selects con listas de otras entidades = FK)
+- Campos generados/calculados (no editables por el usuario)
+
+**Input B — Lista de campos**
+El usuario lista los campos manualmente. Inferir tipos y validaciones razonables, documentando las asunciones.
+
+---
+
+## Paso 1 — Extracción y análisis
+
+Antes de generar el PRD, hacer un análisis silencioso del input y detectar:
+
+### Preguntas obligatorias antes de continuar
+
+Formular **solo las preguntas ambiguas** que impactan el diseño de la DB. No preguntar lo que se puede inferir con certeza.
+
+Ejemplos de preguntas que SÍ hacer:
+- ¿`Categoría` es un enum fijo (lista cerrada) o una tabla separada que puede crecer?
+- ¿`CUIT` es único globalmente o puede repetirse en distintos contextos?
+- ¿Las credenciales generadas crean un usuario en `auth.users` de Supabase o son independientes?
+- ¿`Teléfono` admite múltiples números por empresa o solo uno?
+- ¿Un proveedor puede pertenecer a múltiples categorías o solo una?
+
+Ejemplos de preguntas que NO hacer (inferir directamente):
+- ¿`email` tiene validación de formato? → Sí, siempre
+- ¿`created_at` es automático? → Sí, siempre
+- ¿`id` es UUID? → Sí, siguiendo project-structure
+
+Esperar respuesta del usuario antes de continuar al Paso 2.
+
+---
+
+## Paso 2 — Generar PRD estructurado
+
+Una vez resueltas las ambigüedades, generar el PRD en este formato exacto.
+**Guardarlo como `docs/PRD_[nombre-entidad].md`** para que db-architect lo consuma.
+
+```markdown
+# PRD — [Nombre de la Entidad]
+
+## Contexto
+[Descripción breve de qué es esta entidad y para qué sirve en el sistema]
+
+## Roles con acceso
+| Rol | Puede crear | Puede leer | Puede editar | Puede eliminar |
+|-----|-------------|------------|--------------|----------------|
+| admin | ✅ | ✅ | ✅ | ✅ |
+| provider | ❌ | ✅ (solo propios) | ✅ (solo propios) | ❌ |
+
+## Campos del formulario
+
+| Campo | Nombre técnico | Tipo | Requerido | Validaciones | Notas |
+|-------|---------------|------|-----------|--------------|-------|
+| Razón Social | `razon_social` | TEXT | ✅ | min 2, max 200 | Nombre legal de la empresa |
+| ... | ... | ... | ... | ... | ... |
+
+## Relaciones
+- [Entidad] pertenece a [otra entidad] → FK
+- [Entidad] tiene muchos [otra entidad] → tabla junction
+
+## Campos generados (no editables por usuario)
+- `id`: UUID generado automáticamente
+- `created_at`: timestamp automático
+- `updated_at`: timestamp automático con trigger
+- [otros campos calculados]
+
+## Reglas de negocio
+1. [Regla 1 — ej: CUIT debe ser único en el sistema]
+2. [Regla 2 — ej: Las credenciales se generan automáticamente al crear el proveedor]
+3. [Regla N...]
+
+## Campos sensibles / de seguridad
+- [Campo]: [por qué es sensible y cómo debe manejarse]
+
+## Schema Zod (para reutilizar en frontend y Server Actions)
+[Schema Zod completo inferido de los campos y validaciones]
+
+## Preguntas resueltas
+[Documentar las decisiones tomadas con su justificación]
+```
+
+---
+
+## Paso 3 — Pasar a db-architect
+
+Una vez generado el PRD, indicar explícitamente:
+
+> ✅ PRD generado en `docs/PRD_[nombre].md`
+> 
+> Siguiente paso: aplicar la rule `db-architect` con este PRD como input para diseñar el schema de base de datos.
+
+No continuar con el schema — eso es responsabilidad de `db-architect`.
+
+---
+
+## Reglas del analista
+
+- **No inventar campos** que no estén en el input o no sean estándar de auditoría (`created_at`, `updated_at`, `deleted_at`)
+- **Documentar todas las asunciones** en la sección "Preguntas resueltas"
+- **Un PRD por entidad** — si el formulario crea múltiples entidades (ej: evento + asignación de proveedores), generar un PRD por entidad
+- **Siempre incluir el schema Zod** — es la fuente de verdad compartida entre frontend y backend

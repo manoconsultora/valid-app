@@ -1,12 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { PROVIDER_CATEGORIES } from '@/lib/constants'
-import { addProvider, getProviders } from '@/lib/providers-store'
-import type { Provider } from '@/types'
+import {
+  createProveedor,
+  getProviderCategories,
+  listProveedores,
+  type ProviderCategory,
+  type ProviderRow,
+} from '@/lib/actions/proveedores'
 
 const AVATAR_GRADIENTS = [
   'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -21,11 +25,29 @@ function getInitials(razonSocial: string): string {
   return first ? first.toUpperCase() : '?'
 }
 
+function rowToDisplay(p: ProviderRow, categories: ProviderCategory[]) {
+  const categoryName = categories.find((c) => c.id === p.category_id)?.name ?? p.category_id
+  return {
+    categoryId: p.category_id,
+    categoryName,
+    contactName: p.contact_name ?? '',
+    contactRole: p.contact_role ?? '',
+    cuit: p.cuit,
+    email: p.email,
+    id: p.id,
+    phone: p.phone ?? '',
+    razonSocial: p.razon_social,
+  }
+}
+
 export default function ProveedoresPage() {
-  const [list, setList] = useState<Provider[]>([])
+  const [list, setList] = useState<ProviderRow[]>([])
+  const [categories, setCategories] = useState<ProviderCategory[]>([])
+  const [listError, setListError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
-  const [generatedCreds, setGeneratedCreds] = useState<{ email: string; password: string } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [form, setForm] = useState({
     categoryId: '',
     contactName: '',
@@ -38,28 +60,43 @@ export default function ProveedoresPage() {
 
   useDocumentTitle('Proveedores - VALID')
 
-  useEffect(
-    () => ((t: ReturnType<typeof setTimeout>) => () => clearTimeout(t))(setTimeout(() => setList(getProviders()), 0)),
-    []
-  )
+  /* eslint-disable arrow-body-style -- múltiples sentencias en then/catch */
+  const loadList = useCallback(() => {
+    listProveedores()
+      .then(({ data, error }) => (setListError(error ?? null), setList(data ?? [])))
+      .catch(() => setListError('Error al cargar proveedores'))
+  }, [])
+  /* eslint-enable arrow-body-style */
+
+  /* eslint-disable arrow-body-style -- múltiples sentencias */
+  useEffect(() => {
+    getProviderCategories()
+      .then(({ data }) => data && setCategories(data))
+      .catch(() => undefined)
+  }, [])
+  /* eslint-enable arrow-body-style */
+
+  useEffect(() => loadList(), [loadList])
+
+  const displayList = useMemo(() => list.map((p) => rowToDisplay(p, categories)), [list, categories])
 
   const q = search.trim().toLowerCase()
   const filtered = useMemo(
     () =>
       !search.trim()
-        ? list
-        : list.filter(
-            (p) =>
-              p.razonSocial.toLowerCase().includes(q) ||
-              p.cuit.replace(/-/g, '').includes(q.replace(/-/g, '')) ||
-              (PROVIDER_CATEGORIES.find((c) => c.id === p.categoryId)?.name ?? '').toLowerCase().includes(q)
+        ? displayList
+        : displayList.filter((p) =>
+            p.razonSocial.toLowerCase().includes(q) ||
+            p.cuit.replace(/-/g, '').includes(q.replace(/-/g, '')) ||
+            p.categoryName.toLowerCase().includes(q)
           ),
-    [list, q, search]
+    [displayList, q, search]
   )
 
-  const openModal = () => (
-    setShowModal(true),
-    setGeneratedCreds(null),
+  // eslint-disable-next-line arrow-body-style -- múltiples sentencias
+  const openModal = (): void => {
+    setShowModal(true)
+    setSaveError(null)
     setForm({
       categoryId: '',
       contactName: '',
@@ -69,27 +106,31 @@ export default function ProveedoresPage() {
       phone: '',
       razonSocial: '',
     })
-  )
+  }
 
-  const handleGenerateCreds = () =>
-    setGeneratedCreds({
-      email: form.email || `proveedor${Date.now()}@empresa.com`,
-      password: `generada${Math.random().toString(36).slice(2, 8)}`,
+  // eslint-disable-next-line arrow-body-style -- múltiples sentencias
+  const handleSave = async (): Promise<void> => {
+    setSaveError(null)
+    setSaving(true)
+    /* eslint-disable camelcase -- API/DB usa snake_case */
+    const { error } = await createProveedor({
+      category_id: form.categoryId,
+      contact_name: form.contactName.trim() || undefined,
+      contact_role: form.contactRole.trim() || undefined,
+      cuit: form.cuit.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim() || undefined,
+      razon_social: form.razonSocial.trim(),
     })
-
-  const handleSave = () =>
-    form.razonSocial && form.cuit && form.categoryId && form.email &&
-    (addProvider({
-      categoryId: form.categoryId,
-      contactName: form.contactName,
-      contactRole: form.contactRole,
-      cuit: form.cuit,
-      email: form.email,
-      phone: form.phone,
-      razonSocial: form.razonSocial,
-    }),
-    setList(getProviders()),
-    setShowModal(false))
+    /* eslint-enable camelcase */
+    setSaving(false)
+    if (error) {
+      setSaveError(error)
+      return
+    }
+    setShowModal(false)
+    loadList()
+  }
 
   return (
     <div className="mx-auto max-w-[1000px]">
@@ -128,6 +169,11 @@ export default function ProveedoresPage() {
         />
       </div>
 
+      {listError && (
+        <p className="mb-4 text-sm text-red-600" role="alert">
+          {listError}
+        </p>
+      )}
       <div
         className="rounded-(--radius) border shadow-(--shadow) overflow-hidden"
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
@@ -153,7 +199,7 @@ export default function ProveedoresPage() {
                 </p>
               </div>
               <div className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                {PROVIDER_CATEGORIES.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
+                {p.categoryName}
               </div>
             </li>
           ))}
@@ -211,7 +257,7 @@ export default function ProveedoresPage() {
                   value={form.categoryId}
                 >
                   <option value="">Seleccionar categoría</option>
-                  {PROVIDER_CATEGORIES.map((c) => (
+                  {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -260,32 +306,28 @@ export default function ProveedoresPage() {
                 style={{ background: '#f0f9ff', borderColor: '#bfdbfe' }}
               >
                 <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-                  🔐 Credenciales de Acceso
+                  🔐 Acceso del proveedor
                 </p>
-                <p className="mt-1 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                  Usuario: {generatedCreds?.email ?? '-'}
+                <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  Al guardar se enviará un correo al email indicado con un link para que el usuario defina su contraseña. No se envía contraseña por correo.
                 </p>
-                <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                  Contraseña: {generatedCreds?.password ?? '-'}
-                </p>
-                <button
-                  className="mt-2 rounded-(--radius) border border-(--border) bg-white px-3 py-1.5 text-sm transition-colors hover:bg-gray-50"
-                  onClick={handleGenerateCreds}
-                  type="button"
-                >
-                  🔄 Generar Credenciales
-                </button>
               </div>
+              {saveError && (
+                <p className="text-sm text-red-600" role="alert">
+                  {saveError}
+                </p>
+              )}
             </div>
 
             <div className="mt-6 flex gap-3">
               <button
-                className="rounded-(--radius) px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                className="rounded-(--radius) px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-70"
+                disabled={saving}
                 onClick={handleSave}
                 style={{ background: 'var(--accent)' }}
                 type="button"
               >
-                Guardar
+                {saving ? 'Creando...' : 'Guardar'}
               </button>
               <button
                 className="rounded-(--radius) border border-(--border) px-4 py-2 text-sm font-medium"
