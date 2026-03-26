@@ -15,23 +15,25 @@ export const providerCategorySchema = z.object({
   name: z.string().min(1).max(100),
 })
 
+/* eslint-disable camelcase -- Zod schema mirrors DB snake_case column names */
 export const createProviderSchema = z.object({
-  razon_social: z.string().min(2, 'Mínimo 2 caracteres').max(200).trim(),
-  cuit: cuitSchema,
   category_id: z.string().uuid('Seleccione una categoría'),
-  email: z.string().email('Email corporativo inválido').trim(),
-  phone: z.string().max(50).optional().or(z.literal('')),
   contact_name: z.string().max(200).optional().or(z.literal('')),
   contact_role: z.string().max(200).optional().or(z.literal('')),
+  cuit: cuitSchema,
+  email: z.string().email('Email corporativo inválido').trim(),
+  phone: z.string().max(50).optional().or(z.literal('')),
+  razon_social: z.string().min(2, 'Mínimo 2 caracteres').max(200).trim(),
 })
 
 export type CreateProviderInput = z.infer<typeof createProviderSchema>
 
 export const updateProviderSchema = createProviderSchema.partial().extend({
-  razon_social: z.string().min(2).max(200).trim().optional(),
-  cuit: cuitSchema.optional(),
   category_id: z.string().uuid().optional(),
+  cuit: cuitSchema.optional(),
   email: z.string().email().trim().optional(),
+  razon_social: z.string().min(2).max(200).trim().optional(),
 })
+/* eslint-enable camelcase */
 
 export type UpdateProviderInput = z.infer<typeof updateProviderSchema>

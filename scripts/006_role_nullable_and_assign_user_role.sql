@@ -6,10 +6,11 @@
 ALTER TABLE public.users
   ALTER COLUMN role DROP NOT NULL;
 
--- Función para que un admin asigne rol a un usuario (solo admin puede llamar)
+-- Función para que un admin asigne rol a un usuario (solo admin puede llamar).
+-- Parámetros en orden alfabético (new_role, target_user_id) para que PostgREST/Supabase encuentre la función en el schema cache.
 CREATE OR REPLACE FUNCTION public.assign_user_role(
-  target_user_id uuid,
-  new_role app_role
+  new_role app_role,
+  target_user_id uuid
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -33,4 +34,4 @@ BEGIN
 END;
 $$;
 
-ALTER FUNCTION public.assign_user_role(uuid, app_role) OWNER TO postgres;
+ALTER FUNCTION public.assign_user_role(app_role, uuid) OWNER TO postgres;

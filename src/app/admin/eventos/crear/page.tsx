@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { Button } from '@/components/ui/Button'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { VENUES } from '@/lib/constants'
 import { PROVIDER_CATEGORIES } from '@/lib/constants'
@@ -11,8 +12,7 @@ import { addEvent } from '@/lib/events-store'
 import { getProviders } from '@/lib/providers-store'
 import type { Provider } from '@/types'
 
-const formCardClass =
-  'rounded-lg border p-6 shadow-sm bg-(--surface) border-(--border)'
+const formCardClass = 'rounded-lg border p-6 shadow-sm bg-(--surface) border-(--border)'
 
 export default function CrearEventoPage() {
   const router = useRouter()
@@ -30,21 +30,21 @@ export default function CrearEventoPage() {
   useDocumentTitle('Crear Evento - VALID')
 
   const venuesByCity = {
-    CABA: VENUES.filter((v) => v.city === 'CABA'),
-    Córdoba: VENUES.filter((v) => v.city === 'Córdoba'),
+    CABA: VENUES.filter(v => v.city === 'CABA'),
+    Córdoba: VENUES.filter(v => v.city === 'Córdoba'),
   }
 
   const toggleProvider = (id: string) =>
-    setProviderIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    setProviderIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
 
   const handleSubmit = (e: React.FormEvent) => (
     e.preventDefault(),
     setSending(true),
     setTimeout(
-      () =>
-        (addEvent({
+      () => (
+        addEvent({
           date,
           description,
           name,
@@ -55,7 +55,8 @@ export default function CrearEventoPage() {
           venueId,
         }),
         setSending(false),
-        setShowSuccess(true)),
+        setShowSuccess(true)
+      ),
       1800
     )
   )
@@ -68,28 +69,23 @@ export default function CrearEventoPage() {
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
         style={{ backdropFilter: 'blur(8px)', background: 'rgba(0,0,0,0.2)' }}
       >
-        <div
-          className="w-full max-w-md rounded-[24px] bg-(--surface) px-10 py-12 text-center shadow-(--shadow-lg)"
-        >
+        <div className="w-full max-w-md rounded-[24px] bg-(--surface) px-10 py-12 text-center shadow-(--shadow-lg)">
           <div
             className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-2xl text-white"
-            style={{ background: 'linear-gradient(135deg, var(--success) 0%, #10b981 100%)' }}
+            style={{
+              background: 'linear-gradient(135deg, var(--success) 0%, #10b981 100%)',
+            }}
           >
             ✓
           </div>
-          <h2 className="text-xl font-bold text-(--text)">
-            ¡Evento Creado!
-          </h2>
+          <h2 className="text-xl font-bold text-(--text)">¡Evento Creado!</h2>
           <p className="mt-3 text-sm text-(--text-secondary)">
-            El evento se creó exitosamente en VALID y se envió la invitación con el protocolo a los proveedores seleccionados.
+            El evento se creó exitosamente en VALID y se envió la invitación con el
+            protocolo a los proveedores seleccionados.
           </p>
-          <button
-            className="mt-6 rounded-(--radius) bg-(--text) px-5 py-2.5 font-medium text-white transition-colors hover:opacity-90"
-            onClick={handleGoDashboard}
-            type="button"
-          >
+          <Button className="mt-6" onClick={handleGoDashboard} variant="dark">
             Ir al Dashboard
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -98,16 +94,14 @@ export default function CrearEventoPage() {
   return (
     <div className="mx-auto max-w-[900px]">
       <Link
-        className="mb-6 inline-block text-[12px] font-medium text-accent transition-opacity hover:opacity-70"
+        className="text-accent mb-6 inline-block text-[12px] font-medium transition-opacity hover:opacity-70"
         href="/admin"
       >
         ← Volver
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-xl font-semibold text-(--text)">
-          Crear Nuevo Evento
-        </h1>
+        <h1 className="text-xl font-semibold text-(--text)">Crear Nuevo Evento</h1>
         <p className="mt-1 text-sm text-(--text-secondary)">
           Completa la información del evento y asigna proveedores
         </p>
@@ -121,52 +115,61 @@ export default function CrearEventoPage() {
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-(--text)" htmlFor="name">
+              <label
+                className="mb-1 block text-sm font-medium text-(--text)"
+                htmlFor="name"
+              >
                 Nombre del Evento
               </label>
               <input
                 className="w-full rounded-(--radius) border border-(--border) bg-white px-3 py-2 text-(--text)"
                 id="name"
-                onChange={(e) => setName(e.target.value)}
+                onChange={e => setName(e.target.value)}
                 placeholder="Ej: Lollapalooza Argentina 2025"
                 required
                 value={name}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-(--text)" htmlFor="date">
+              <label
+                className="mb-1 block text-sm font-medium text-(--text)"
+                htmlFor="date"
+              >
                 Fecha del Evento
               </label>
               <input
                 className="w-full rounded-(--radius) border border-(--border) bg-white px-3 py-2"
                 id="date"
-                onChange={(e) => setDate(e.target.value)}
+                onChange={e => setDate(e.target.value)}
                 required
                 type="date"
                 value={date}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-(--text)" htmlFor="venue">
+              <label
+                className="mb-1 block text-sm font-medium text-(--text)"
+                htmlFor="venue"
+              >
                 Lugar
               </label>
               <select
                 className="w-full rounded-(--radius) border border-(--border) bg-white px-3 py-2 text-(--text)"
                 id="venue"
-                onChange={(e) => setVenueId(e.target.value)}
+                onChange={e => setVenueId(e.target.value)}
                 required
                 value={venueId}
               >
                 <option value="">Seleccionar venue...</option>
                 <optgroup label="CABA">
-                  {venuesByCity.CABA.map((v) => (
+                  {venuesByCity.CABA.map(v => (
                     <option key={v.id} value={v.id}>
                       {v.name}
                     </option>
                   ))}
                 </optgroup>
                 <optgroup label="Córdoba">
-                  {venuesByCity.Córdoba.map((v) => (
+                  {venuesByCity.Córdoba.map(v => (
                     <option key={v.id} value={v.id}>
                       {v.name}
                     </option>
@@ -175,25 +178,31 @@ export default function CrearEventoPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-(--text)" htmlFor="time">
+              <label
+                className="mb-1 block text-sm font-medium text-(--text)"
+                htmlFor="time"
+              >
                 Horario
               </label>
               <input
                 className="w-full rounded-(--radius) border border-(--border) bg-white px-3 py-2 text-(--text)"
                 id="time"
-                onChange={(e) => setTimeRange(e.target.value)}
+                onChange={e => setTimeRange(e.target.value)}
                 placeholder="Ej: 12:00 - 23:00"
                 value={timeRange}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-(--text)" htmlFor="desc">
+              <label
+                className="mb-1 block text-sm font-medium text-(--text)"
+                htmlFor="desc"
+              >
                 Descripción
               </label>
               <textarea
                 className="w-full rounded-(--radius) border border-(--border) bg-white px-3 py-2 text-(--text)"
                 id="desc"
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={e => setDescription(e.target.value)}
                 placeholder="Describe el evento..."
                 rows={3}
                 value={description}
@@ -206,10 +215,7 @@ export default function CrearEventoPage() {
               <p className="text-xs text-(--text-secondary)">
                 La imagen se mostrará en el dashboard principal del evento
               </p>
-              <button
-                className="mt-2 text-sm font-medium text-accent"
-                type="button"
-              >
+              <button className="text-accent mt-2 text-sm font-medium" type="button">
                 Eliminar
               </button>
             </div>
@@ -229,19 +235,27 @@ export default function CrearEventoPage() {
               <p className="text-xs text-(--text-secondary)">
                 El protocolo será enviado a todas las empresas asignadas
               </p>
-              <div className="mt-2 rounded-lg border px-3 py-2 text-sm" style={{ background: '#f0f9ff', borderColor: '#bfdbfe' }}>
+              <div
+                className="mt-2 rounded-lg border px-3 py-2 text-sm"
+                style={{ background: '#f0f9ff', borderColor: '#bfdbfe' }}
+              >
                 <span className="text-(--text-secondary)">Sin archivo. </span>
-                <button className="font-medium text-accent" type="button">×</button>
+                <button className="text-accent font-medium" type="button">
+                  ×
+                </button>
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-(--text)" htmlFor="notes">
+              <label
+                className="mb-1 block text-sm font-medium text-(--text)"
+                htmlFor="notes"
+              >
                 Notas del Protocolo (Opcional)
               </label>
               <input
                 className="w-full rounded-(--radius) border border-(--border) bg-white px-3 py-2 text-(--text)"
                 id="notes"
-                onChange={(e) => setProtocolNotes(e.target.value)}
+                onChange={e => setProtocolNotes(e.target.value)}
                 placeholder="Requisitos especiales o consideraciones adicionales..."
                 value={protocolNotes}
               />
@@ -258,13 +272,15 @@ export default function CrearEventoPage() {
             Selecciona las empresas que participarán en este evento
           </p>
           <ul className="space-y-2">
-            {providers.map((p) => (
+            {providers.map(p => (
               <li key={p.id}>
                 <label
                   className="flex cursor-pointer items-center gap-3 rounded-(--radius) border px-4 py-3 transition-colors"
                   style={{
                     background: providerIds.includes(p.id) ? '#e3f2ff' : 'transparent',
-                    borderColor: providerIds.includes(p.id) ? 'var(--accent)' : 'var(--border)',
+                    borderColor: providerIds.includes(p.id)
+                      ? 'var(--accent)'
+                      : 'var(--border)',
                   }}
                 >
                   <input
@@ -275,8 +291,10 @@ export default function CrearEventoPage() {
                   <span className="text-sm font-medium text-(--text)">
                     {p.razonSocial}
                   </span>
-                  <span className="text-xs font-mono text-(--text-secondary)">
-                    CUIT: {p.cuit} • {PROVIDER_CATEGORIES.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
+                  <span className="font-mono text-xs text-(--text-secondary)">
+                    CUIT: {p.cuit} •{' '}
+                    {PROVIDER_CATEGORIES.find(c => c.id === p.categoryId)?.name ??
+                      p.categoryId}
                   </span>
                 </label>
               </li>
@@ -285,23 +303,17 @@ export default function CrearEventoPage() {
         </div>
 
         <p className="text-xs text-(--text-secondary)">
-          Al hacer click en el botón se crea el evento en VALID y se envía la invitación con el protocolo al perfil del Proveedor.
+          Al hacer click en el botón se crea el evento en VALID y se envía la invitación
+          con el protocolo al perfil del Proveedor.
         </p>
 
         <div className="flex gap-3">
-          <button
-            className="rounded-(--radius) bg-accent px-4 py-2 font-medium text-white disabled:opacity-70"
-            disabled={sending}
-            type="submit"
-          >
+          <Button disabled={sending} type="submit">
             {sending ? 'Creando evento y enviando invitaciones...' : 'Confirmar & Enviar'}
-          </button>
-          <Link
-            className="rounded-(--radius) border border-(--border) px-4 py-2 font-medium text-(--text)"
-            href="/admin"
-          >
-            Cancelar
-          </Link>
+          </Button>
+          <Button asChild variant="ghost">
+            <Link href="/admin">Cancelar</Link>
+          </Button>
         </div>
       </form>
 
@@ -316,9 +328,7 @@ export default function CrearEventoPage() {
               Creando evento y enviando invitaciones...
             </p>
             <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-(--border)">
-              <div
-                className="h-full w-[60%] animate-pulse rounded-full bg-accent"
-              />
+              <div className="bg-accent h-full w-[60%] animate-pulse rounded-full" />
             </div>
           </div>
         </div>

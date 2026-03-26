@@ -14,7 +14,7 @@ import { useMounted } from '@/hooks/useMounted'
 const getInitials = (name: string): string =>
   name
     .split(/\s+/)
-    .map((s) => s[0])
+    .map(s => s[0])
     .join('')
     .toUpperCase()
     .slice(0, 2)
@@ -75,7 +75,7 @@ function AdminHeader({
         <div className="relative">
           <div
             className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full font-semibold text-white transition-opacity hover:opacity-85"
-            onClick={() => setDropdownOpen((o) => !o)}
+            onClick={() => setDropdownOpen(o => !o)}
             ref={avatarRef}
             role="button"
             style={{ background: 'var(--accent)', fontSize: '15px' }}
@@ -84,7 +84,7 @@ function AdminHeader({
             {displayInitials}
           </div>
           <div
-            className="absolute right-0 top-[52px] z-1000 min-w-[200px] rounded-(--radius) border bg-(--surface) py-1 transition-all"
+            className="absolute top-[52px] right-0 z-1000 min-w-[200px] rounded-(--radius) border bg-(--surface) py-1 transition-all"
             ref={dropdownRef}
             style={{
               borderColor: 'var(--border)',
@@ -94,10 +94,7 @@ function AdminHeader({
               transform: dropdownTransform,
             }}
           >
-            <div
-              className="border-b px-4 py-3"
-              style={{ borderColor: 'var(--border)' }}
-            >
+            <div className="border-b px-4 py-3" style={{ borderColor: 'var(--border)' }}>
               <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
                 {displayName}
               </div>
@@ -150,11 +147,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
-      <AdminHeader
-        onLogout={handleLogout}
-        userEmail={userEmail}
-        userName={userName}
-      />
+      <AdminHeader onLogout={handleLogout} userEmail={userEmail} userName={userName} />
       <main className="mx-auto px-6 py-6">{children}</main>
       <FooterAdmin />
     </div>

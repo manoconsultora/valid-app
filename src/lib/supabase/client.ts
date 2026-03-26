@@ -14,7 +14,10 @@ const supabaseKey =
  * Usa @supabase/ssr para compatibilidad con middleware y cookies.
  */
 export const createClient = () =>
-  createBrowserClient<Database>(supabaseUrl, supabaseKey) as unknown as SupabaseClient<Database>
+  createBrowserClient<Database>(
+    supabaseUrl,
+    supabaseKey
+  ) as unknown as SupabaseClient<Database>
 
 /** Singleton para useAuth, authService y componentes cliente. */
 export const supabase = createClient()

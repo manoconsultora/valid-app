@@ -6,44 +6,44 @@ Entidad que representa una empresa proveedora que puede ser asignada a eventos p
 
 ## Roles con acceso
 
-| Rol      | Puede crear | Puede leer | Puede editar | Puede eliminar |
-|----------|-------------|------------|--------------|----------------|
-| admin    | ✅          | ✅         | ✅           | ✅             |
-| provider | ❌          | ✅ (solo propio) | ✅ (solo propio) | ❌       |
+| Rol      | Puede crear | Puede leer       | Puede editar     | Puede eliminar |
+| -------- | ----------- | ---------------- | ---------------- | -------------- |
+| admin    | ✅          | ✅               | ✅               | ✅             |
+| provider | ❌          | ✅ (solo propio) | ✅ (solo propio) | ❌             |
 
 ## Campos del formulario
 
-| Campo                  | Nombre técnico  | Tipo   | Requerido | Validaciones                    | Notas                              |
-|------------------------|-----------------|--------|-----------|---------------------------------|------------------------------------|
-| Razón Social           | `razon_social`  | TEXT   | ✅        | min 2, max 200                  | Nombre legal de la empresa         |
-| CUIT                   | `cuit`          | TEXT   | ✅        | formato 00-00000000-0, dígito verificador | Único en el sistema; validar con util |
-| Categoría              | `category_id`   | UUID FK| ✅        | FK a provider_categories        | Una categoría por proveedor (MVP)   |
-| Email Corporativo      | `email`         | TEXT   | ✅        | formato email                   | Único; se usa para login del usuario auth |
-| Teléfono               | `phone`         | TEXT   | ❌        | opcional, max 50                | Un solo teléfono por proveedor     |
-| Contacto Responsable   | `contact_name`  | TEXT   | ❌        | max 200                         | Nombre del responsable             |
-| Función del Contacto   | `contact_role`  | TEXT   | ❌        | max 200                         | Ej: RRHH, Dueño, Gerente           |
+| Campo                | Nombre técnico | Tipo    | Requerido | Validaciones                              | Notas                                     |
+| -------------------- | -------------- | ------- | --------- | ----------------------------------------- | ----------------------------------------- |
+| Razón Social         | `razon_social` | TEXT    | ✅        | min 2, max 200                            | Nombre legal de la empresa                |
+| CUIT                 | `cuit`         | TEXT    | ✅        | formato 00-00000000-0, dígito verificador | Único en el sistema; validar con util     |
+| Categoría            | `category_id`  | UUID FK | ✅        | FK a provider_categories                  | Una categoría por proveedor (MVP)         |
+| Email Corporativo    | `email`        | TEXT    | ✅        | formato email                             | Único; se usa para login del usuario auth |
+| Teléfono             | `phone`        | TEXT    | ❌        | opcional, max 50                          | Un solo teléfono por proveedor            |
+| Contacto Responsable | `contact_name` | TEXT    | ❌        | max 200                                   | Nombre del responsable                    |
+| Función del Contacto | `contact_role` | TEXT    | ❌        | max 200                                   | Ej: RRHH, Dueño, Gerente                  |
 
 ## Entidad relacionada: Categoría de proveedor
 
 La categoría es una **tabla en la DB** (`provider_categories`) para poder testear y eventualmente que el admin gestione categorías. MVP: una sola categoría por proveedor (FK).
 
-| Campo | Nombre técnico | Tipo  | Notas                    |
-|-------|----------------|-------|--------------------------|
-| id    | `id`           | UUID  | PK                       |
-| name  | `name`         | TEXT  | Nombre mostrado (ej. "Equipamiento") |
+| Campo | Nombre técnico | Tipo | Notas                                |
+| ----- | -------------- | ---- | ------------------------------------ |
+| id    | `id`           | UUID | PK                                   |
+| name  | `name`         | TEXT | Nombre mostrado (ej. "Equipamiento") |
 
 **Seed inicial** (convertir de `PROVIDER_CATEGORIES` actual para que el formato coincida con la DB y se pueda testear):
 
-| id (slug para seed) | name        |
-|---------------------|-------------|
-| equipamiento        | Equipamiento|
-| tecnologia          | Tecnología  |
-| iluminacion         | Iluminación |
-| audio               | Audio       |
-| montaje             | Montaje     |
-| seguridad           | Seguridad   |
-| catering            | Catering    |
-| transporte          | Transporte  |
+| id (slug para seed) | name         |
+| ------------------- | ------------ |
+| equipamiento        | Equipamiento |
+| tecnologia          | Tecnología   |
+| iluminacion         | Iluminación  |
+| audio               | Audio        |
+| montaje             | Montaje      |
+| seguridad           | Seguridad    |
+| catering            | Catering     |
+| transporte          | Transporte   |
 
 Recomendación: en la DB usar UUID como PK y opcionalmente un `slug` o `code` único para migrar desde los ids actuales; el seed puede insertar estos 8 registros.
 
@@ -86,7 +86,7 @@ const cuitSchema = z
   .string()
   .min(1, 'CUIT requerido')
   .regex(/^\d{2}-\d{8}-\d{1}$/, 'Formato: 00-00000000-0')
-  .refine((val) => isValidCuit(val), 'CUIT con dígito verificador inválido')
+  .refine(val => isValidCuit(val), 'CUIT con dígito verificador inválido')
 
 export const providerCategorySchema = z.object({
   id: z.string().uuid(),
@@ -110,14 +110,14 @@ Nota: `isValidCuit` debe implementarse en una util (ej. `src/lib/utils/cuit.ts`)
 
 ## Preguntas resueltas
 
-| Pregunta | Decisión | Justificación |
-|----------|----------|---------------|
-| ¿Categoría enum o tabla? | Tabla `provider_categories` | Permitir testear con formato de DB y que el admin gestione categorías; seed con la lista actual de `PROVIDER_CATEGORIES`. |
-| ¿CUIT único? | Sí, único en el sistema | Un CUIT identifica una sola empresa en el sistema. |
-| ¿Validación CUIT? | Sí, dígito verificador | Util dedicada (ej. `src/lib/utils/cuit.ts`) para validar formato y dígito verificador. |
-| ¿Credenciales crean usuario en auth? | Sí | Crear usuario real en auth; el pass es solo para que auth cree la cuenta; al usuario se envía mail con link de reseteo (magic link), nunca la contraseña por mail. |
-| ¿Varios teléfonos por proveedor? | No, uno solo (MVP) | Un campo `phone` por proveedor. |
-| ¿Una o varias categorías por proveedor? | Una (MVP) | FK `category_id` a `provider_categories`; si más adelante se necesitan varias, se puede añadir tabla junction. |
+| Pregunta                                | Decisión                    | Justificación                                                                                                                                                      |
+| --------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ¿Categoría enum o tabla?                | Tabla `provider_categories` | Permitir testear con formato de DB y que el admin gestione categorías; seed con la lista actual de `PROVIDER_CATEGORIES`.                                          |
+| ¿CUIT único?                            | Sí, único en el sistema     | Un CUIT identifica una sola empresa en el sistema.                                                                                                                 |
+| ¿Validación CUIT?                       | Sí, dígito verificador      | Util dedicada (ej. `src/lib/utils/cuit.ts`) para validar formato y dígito verificador.                                                                             |
+| ¿Credenciales crean usuario en auth?    | Sí                          | Crear usuario real en auth; el pass es solo para que auth cree la cuenta; al usuario se envía mail con link de reseteo (magic link), nunca la contraseña por mail. |
+| ¿Varios teléfonos por proveedor?        | No, uno solo (MVP)          | Un campo `phone` por proveedor.                                                                                                                                    |
+| ¿Una o varias categorías por proveedor? | Una (MVP)                   | FK `category_id` a `provider_categories`; si más adelante se necesitan varias, se puede añadir tabla junction.                                                     |
 
 ---
 

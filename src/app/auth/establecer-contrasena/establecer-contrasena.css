@@ -1,0 +1,160 @@
+/* Reutiliza estilos del login; solo lo específico de esta página si hace falta */
+.set-password-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.set-password-container {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(var(--blur));
+  border-radius: 28px;
+  padding: 48px 32px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--stroke);
+}
+
+.set-password-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.set-password-subtitle {
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 24px;
+  line-height: 1.4;
+}
+
+.set-password-form .form-group {
+  margin-bottom: 20px;
+}
+
+.set-password-form .form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  display: block;
+  letter-spacing: -0.01em;
+}
+
+.set-password-form .form-input {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 18px;
+  font-size: 15px;
+  font-family: inherit;
+  transition: all 0.18s ease;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(var(--blur));
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.set-password-form .form-input::placeholder {
+  color: var(--muted);
+}
+
+.set-password-form .form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn-set-password {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 18px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  box-shadow: 0 12px 30px rgba(102, 126, 234, 0.3);
+  letter-spacing: -0.01em;
+  margin-top: 8px;
+}
+
+.btn-set-password:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(102, 126, 234, 0.4);
+}
+
+.btn-set-password:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-set-password:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.set-password-footer {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--stroke);
+}
+
+.set-password-footer .footer-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: opacity 0.18s ease;
+}
+
+.set-password-footer .footer-link:hover {
+  opacity: 0.7;
+}
+
+/* Alertas (mismo criterio que login) */
+.alert {
+  padding: 14px 18px;
+  border-radius: 18px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  display: none;
+  border: 1px solid;
+  backdrop-filter: blur(var(--blur));
+  letter-spacing: -0.01em;
+  font-weight: 500;
+}
+
+.alert-success {
+  background: rgba(52, 199, 89, 0.12);
+  color: #1a7f37;
+  border-color: rgba(52, 199, 89, 0.25);
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #c41d33;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.alert-visible {
+  display: block;
+}
+
+@media (max-width: 480px) {
+  .set-password-container {
+    padding: 32px 24px;
+  }
+}

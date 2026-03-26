@@ -40,10 +40,7 @@ export function PageHeader({
           </p>
         ) : null}
       </div>
-      {showRightSlot ? (
-        <div className="flex items-center gap-2">{rightSlot}</div>
-      ) : null}
+      {showRightSlot ? <div className="flex items-center gap-2">{rightSlot}</div> : null}
     </div>
   )
 }
-

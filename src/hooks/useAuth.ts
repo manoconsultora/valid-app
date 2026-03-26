@@ -19,7 +19,7 @@ function runInitialLoad(
     setSession(session)
     if (session?.user?.id) {
       fetchProfile(supabase, session.user.id)
-        .then((profile) => (setUser(profile), setLoading(false)))
+        .then(profile => (setUser(profile), setLoading(false)))
         .catch(() => (setUser(null), setLoading(false)))
     } else {
       setUser(null)
@@ -28,21 +28,19 @@ function runInitialLoad(
   }
   getInitialSession(supabase)
     .then(applyInitialSession)
-    .catch(() =>
-      (setSession(null), setUser(null), setLoading(false)))
+    .catch(() => (setSession(null), setUser(null), setLoading(false)))
 }
 
 function setupAuthSubscription(
   setSession: (_s: AuthSession | null) => void,
   setUser: (_u: User | null) => void
 ) {
-  function handleAuthChange(
-    _event: unknown,
-    nextSession: AuthSession | null
-  ) {
+  function handleAuthChange(_event: unknown, nextSession: AuthSession | null) {
     setSession(nextSession)
     if (nextSession?.user?.id) {
-      fetchProfile(supabase, nextSession.user.id).then(setUser).catch(() => setUser(null))
+      fetchProfile(supabase, nextSession.user.id)
+        .then(setUser)
+        .catch(() => setUser(null))
     } else {
       setUser(null)
     }
@@ -73,27 +71,31 @@ export function useAuth(): {
   const [session, setSession] = useState<AuthSession | null>(null)
   const [user, setUser] = useState<User | null>(null)
 
-  useEffect(
-    () => void runInitialLoad(setLoading, setSession, setUser),
-    []
-  )
+  useEffect(() => void runInitialLoad(setLoading, setSession, setUser), [])
 
   useEffect(() => setupAuthSubscription(setSession, setUser), [])
 
   const signIn = useCallback(
-    (email: string, password: string) =>
-      (setError(null),
-      performSignInService(supabase, email, password).then((result) =>
-        (result.error && setError(result.error),
-        result.session && result.user && (setSession(result.session), setUser(result.user)),
-        result))),
+    (email: string, password: string) => (
+      setError(null),
+      performSignInService(supabase, email, password).then(
+        result => (
+          result.error && setError(result.error),
+          result.session &&
+            result.user &&
+            (setSession(result.session), setUser(result.user)),
+          result
+        )
+      )
+    ),
     []
   )
 
   const signOut = useCallback(
     () =>
-      signOutService(supabase).then(() =>
-        (setError(null), setSession(null), setUser(null))),
+      signOutService(supabase).then(
+        () => (setError(null), setSession(null), setUser(null))
+      ),
     []
   )
 

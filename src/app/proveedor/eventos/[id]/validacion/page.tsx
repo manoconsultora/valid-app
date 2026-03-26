@@ -15,49 +15,49 @@ const PROVEEDOR_ID = 'p1'
 /** Demo: trabajadores para estado de validación (SOP). */
 const DEMO_WORKERS = [
   {
+    art: 'Vigente ✓',
+    cuil: '20-35123456-7',
+    dni: '35.123.456',
+    fechaValidacion: '25 Oct 2024',
     name: 'Juan Martínez',
     role: 'Técnico de Sonido',
     status: 'Aprobado' as const,
-    dni: '35.123.456',
-    fechaValidacion: '25 Oct 2024',
-    cuil: '20-35123456-7',
-    art: 'Vigente ✓',
   },
   {
+    art: 'En Revisión',
+    cuil: '27-42987654-3',
+    dni: '42.987.654',
+    fechaValidacion: '28 Oct 2024',
     name: 'Laura González',
     role: 'Asistente de Producción',
     status: 'Pendiente' as const,
-    dni: '42.987.654',
-    fechaValidacion: '28 Oct 2024',
-    cuil: '27-42987654-3',
-    art: 'En Revisión',
   },
   {
+    art: 'Vigente ✓',
+    cuil: '20-38456789-5',
+    dni: '38.456.789',
+    fechaValidacion: '26 Oct 2024',
     name: 'Carlos Rodríguez',
     role: 'Iluminación',
     status: 'Aprobado' as const,
-    dni: '38.456.789',
-    fechaValidacion: '26 Oct 2024',
-    cuil: '20-38456789-5',
-    art: 'Vigente ✓',
   },
   {
+    art: 'En Revisión',
+    cuil: '27-40123789-1',
+    dni: '40.123.789',
+    fechaValidacion: '28 Oct 2024',
     name: 'María Fernández',
     role: 'Escenario',
     status: 'Pendiente' as const,
-    dni: '40.123.789',
-    fechaValidacion: '28 Oct 2024',
-    cuil: '27-40123789-1',
-    art: 'En Revisión',
   },
   {
+    art: 'Vigente ✓',
+    cuil: '20-36789012-9',
+    dni: '36.789.012',
+    fechaValidacion: '25 Oct 2024',
     name: 'Pablo Ramírez',
     role: 'Electricista',
     status: 'Aprobado' as const,
-    dni: '36.789.012',
-    fechaValidacion: '25 Oct 2024',
-    cuil: '20-36789012-9',
-    art: 'Vigente ✓',
   },
 ]
 
@@ -66,12 +66,13 @@ const aprobados = 14
 const rechazados = 0
 const total = pendientes + aprobados + rechazados
 
-const initials = (name: string) => name
+const initials = (name: string) =>
+  name
     .split(' ')
-    .map((s) => s[0])
+    .map(s => s[0])
     .slice(0, 2)
     .join('')
-    .toUpperCase();
+    .toUpperCase()
 
 type Filter = 'todos' | 'pendientes' | 'aprobados'
 
@@ -81,18 +82,22 @@ export default function ProveedorValidacionPage() {
   const [event, setEvent] = useState<Event | null>(null)
   const [filter, setFilter] = useState<Filter>('todos')
 
-  useEffect(() => {
-    const t = setTimeout(
-      () =>
-        setEvent(
-          getEvents().find(
-            (e) => e.id === id && e.providerIds.includes(PROVEEDOR_ID)
-          ) ?? null
-        ),
-      0
-    )
-    return () => clearTimeout(t)
-  }, [id])
+  useEffect(
+    function loadEvent() {
+      const t = setTimeout(
+        () =>
+          setEvent(
+            getEvents().find(e => e.id === id && e.providerIds.includes(PROVEEDOR_ID)) ??
+              null
+          ),
+        0
+      )
+      return function cleanup() {
+        clearTimeout(t)
+      }
+    },
+    [id]
+  )
 
   if (!event) {
     return (
@@ -115,10 +120,7 @@ export default function ProveedorValidacionPage() {
       >
         ← Volver
       </Link>
-      <PageHeader
-        subtitle={subtitle}
-        title="Estado de Validación"
-      />
+      <PageHeader subtitle={subtitle} title="Estado de Validación" />
 
       <div className="mb-6 grid grid-cols-3 gap-4">
         <MetricCard
@@ -165,16 +167,13 @@ export default function ProveedorValidacionPage() {
           onClick={() => setFilter('aprobados')}
           type="button"
         >
-          <Badge variant={filter === 'aprobados' ? 'accent' : 'neutral'}>
-            Aprobados
-          </Badge>
+          <Badge variant={filter === 'aprobados' ? 'accent' : 'neutral'}>Aprobados</Badge>
         </button>
       </div>
 
       <div className="mb-6 flex gap-2">
         <button
-          className="flex items-center gap-2 rounded-(--radius) border border-(--stroke) px-4 py-2 text-sm font-medium text-(--text)"
-          style={{ background: 'var(--bg)' }}
+          className="flex items-center gap-2 rounded-(--radius) border border-(--stroke) bg-(--bg) px-4 py-2 text-sm font-medium text-(--text)"
           type="button"
         >
           <span>📊</span>
@@ -192,13 +191,11 @@ export default function ProveedorValidacionPage() {
 
       <section>
         <div className="mb-4 flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-(--text)">
-            Trabajadores
-          </h2>
+          <h2 className="text-lg font-semibold text-(--text)">Trabajadores</h2>
           <Badge variant="accent">{total}</Badge>
         </div>
         <ul className="space-y-3">
-          {DEMO_WORKERS.map((w) => (
+          {DEMO_WORKERS.map(w => (
             <li
               className="rounded-(--radius) border border-(--stroke) p-4"
               key={w.name}

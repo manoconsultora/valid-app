@@ -11,7 +11,9 @@ function mergePdfsIntoDocs(
 ): Record<number, File[]> {
   const current = prev[num] ?? []
   const space = MAX_FILES_PER_DOC - current.length
-  if (space <= 0) return prev
+  if (space <= 0) {
+    return prev
+  }
   return { ...prev, [num]: [...current, ...pdfs.slice(0, space)] }
 }
 
@@ -23,29 +25,29 @@ export function useValidacionADocs() {
   const [docsA, setDocsA] = useState<Record<number, File[]>>(initialDocsA)
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
 
-  const docsWithFilesCount = Object.values(docsA).filter(
-    (files) => files.length > 0
-  ).length
-  const totalFilesA = Object.values(docsA).reduce(
-    (sum, files) => sum + files.length,
-    0
-  )
+  const docsWithFilesCount = Object.values(docsA).filter(files => files.length > 0).length
+  const totalFilesA = Object.values(docsA).reduce((sum, files) => sum + files.length, 0)
   const docCount = VALIDACION_A_DOC_TYPES.length
   const progressPercentA = (docsWithFilesCount / docCount) * 100
   const canSubmitA = docsWithFilesCount > 0
 
-  const handleDocUpload = useCallback((num: number, files: FileList | null) => {
-    if (!files?.length) return
-    const pdfs = Array.from(files).filter(
-      (f) => f.type === 'application/pdf'
-    )
-    setDocsA((prev) => mergePdfsIntoDocs(prev, num, pdfs))
+  const handleDocUpload = useCallback(function onDocUpload(
+    num: number,
+    files: FileList | null
+  ) {
+    if (!files?.length) {
+      return
+    }
+    const pdfs = Array.from(files).filter(f => f.type === 'application/pdf')
+    setDocsA(prev => mergePdfsIntoDocs(prev, num, pdfs))
     const input = fileInputRefs.current[num]
-    if (input) input.value = ''
+    if (input) {
+      input.value = ''
+    }
   }, [])
 
-  const removeFileA = useCallback((num: number, index: number) => {
-    setDocsA((prev) => ({
+  const removeFileA = useCallback(function onRemoveFileA(num: number, index: number) {
+    setDocsA(prev => ({
       ...prev,
       [num]: (prev[num] ?? []).filter((_, i) => i !== index),
     }))

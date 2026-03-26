@@ -32,7 +32,7 @@ export function ProveedorShell({ children }: { children: React.ReactNode }) {
         </div>
       ) : (
         <>
-          <main className="min-w-0 flex-1 p-6 w-full">{children}</main>
+          <main className="w-full min-w-0 flex-1 p-6">{children}</main>
           <FooterProveedor onLogout={handleLogout} />
         </>
       )}

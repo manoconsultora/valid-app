@@ -1,9 +1,8 @@
- 'use client'
+'use client'
 
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-
 
 import { Badge } from '@/components/ui/Badge'
 import { EventCard } from '@/components/ui/EventCard'
@@ -18,7 +17,7 @@ import type { Event } from '@/types'
 
 export default function AdminDashboardPage() {
   const [events, setEvents] = useState<Event[]>([])
-  const venueById = Object.fromEntries(VENUES.map((v) => [v.id, v]))
+  const venueById = Object.fromEntries(VENUES.map(v => [v.id, v]))
   const { user } = useUser()
   const userName = user?.name ?? ''
 
@@ -26,13 +25,14 @@ export default function AdminDashboardPage() {
 
   useEffect(
     () =>
-      ((t: ReturnType<typeof setTimeout>) => () => clearTimeout(t))(
-        setTimeout(() => setEvents(getEvents()), 0)
-      ),
+      (
+        (t: ReturnType<typeof setTimeout>) => () =>
+          clearTimeout(t)
+      )(setTimeout(() => setEvents(getEvents()), 0)),
     []
   )
 
-  const uniqueProviders = new Set(events.flatMap((e) => e.providerIds)).size
+  const uniqueProviders = new Set(events.flatMap(e => e.providerIds)).size
   const totalEmployees = events.reduce((acc, e) => acc + (e.employeeCount ?? 0), 0)
   const companiesWithDocs = Math.min(uniqueProviders, 15)
   const companiesTotal = Math.max(uniqueProviders, 15)
@@ -87,7 +87,10 @@ export default function AdminDashboardPage() {
 
       {/* Gestión */}
       <section className="mb-8">
-        <h2 className="mb-3 text-base font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
+        <h2
+          className="mb-3 text-base font-semibold tracking-tight"
+          style={{ color: 'var(--text)' }}
+        >
           Gestión
         </h2>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -138,16 +141,22 @@ export default function AdminDashboardPage() {
 
       {/* Eventos Activos */}
       <section className="mb-8">
-        <h2 className="mb-5 text-base font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
+        <h2
+          className="mb-5 text-base font-semibold tracking-tight"
+          style={{ color: 'var(--text)' }}
+        >
           Eventos Activos
         </h2>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {events.length === 0 ? (
-            <p className="col-span-full py-8 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <p
+              className="col-span-full py-8 text-center text-sm"
+              style={{ color: 'var(--text-secondary)' }}
+            >
               No hay eventos activos. Creá uno desde Gestión.
             </p>
           ) : (
-            events.map((event) => (
+            events.map(event => (
               <EventCard
                 badgeBottomLeft={
                   <Badge as="div" className="backdrop-blur-md" variant="surface">
@@ -156,7 +165,7 @@ export default function AdminDashboardPage() {
                 }
                 badgeTopRight={
                   <Badge
-                    className="text-[11px] uppercase tracking-wider"
+                    className="text-[11px] tracking-wider uppercase"
                     variant={statusAdminToBadgeVariant(event.statusAdmin)}
                   >
                     {event.statusAdmin}
@@ -172,7 +181,10 @@ export default function AdminDashboardPage() {
                         fill
                         sizes="(max-width: 640px) 100vw, 320px"
                         src={event.flyerUrl}
-                        unoptimized={event.flyerUrl.startsWith('http') && !event.flyerUrl.includes('unsplash.com')}
+                        unoptimized={
+                          event.flyerUrl.startsWith('http') &&
+                          !event.flyerUrl.includes('unsplash.com')
+                        }
                       />
                     ) : null}
                     <span className="sr-only">Flyer: {event.name}</span>

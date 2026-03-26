@@ -57,9 +57,7 @@ export const ValidationCard = ({
         </div>
         <div
           className={
-            statusClassName
-              ? `validation-status ${statusClassName}`
-              : 'validation-status'
+            statusClassName ? `validation-status ${statusClassName}` : 'validation-status'
           }
         >
           {status}
@@ -69,9 +67,7 @@ export const ValidationCard = ({
       {resultTitle != null && (
         <div
           className={
-            resultClassName
-              ? `validation-result ${resultClassName}`
-              : 'validation-result'
+            resultClassName ? `validation-result ${resultClassName}` : 'validation-result'
           }
         >
           <div
@@ -83,13 +79,11 @@ export const ValidationCard = ({
           >
             {resultTitle}
           </div>
-          {resultText != null && (
-            <div className="result-text">{resultText}</div>
-          )}
+          {resultText != null && <div className="result-text">{resultText}</div>}
         </div>
       )}
       <div className="validation-details text-left">
-        {details.map((d) => (
+        {details.map(d => (
           <div className="detail-item" key={d.label}>
             <div className="detail-label">{d.label}</div>
             <div className="detail-value">{d.value}</div>
@@ -113,9 +107,7 @@ export const ValidationCard = ({
   )
 
   if (onClick == null) {
-    return (
-      <div className="validation-card validation-card-readonly">{content}</div>
-    )
+    return <div className="validation-card validation-card-readonly">{content}</div>
   }
 
   return (

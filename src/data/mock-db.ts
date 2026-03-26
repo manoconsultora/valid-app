@@ -5,12 +5,7 @@
 /* eslint-disable camelcase -- DB/API shape uses snake_case */
 /* eslint-disable sort-keys -- keys match DB column order */
 
-import type {
-  DbEvent,
-  DbEventProvider,
-  DbProvider,
-  DbValidationError,
-} from '@/types/db'
+import type { DbEvent, DbEventProvider, DbProvider, DbValidationError } from '@/types/db'
 
 const now = '2024-01-01T00:00:00Z'
 
@@ -22,7 +17,7 @@ export const DB_PROVIDERS: DbProvider[] = [
     contact_name: 'Nombre del responsable',
     contact_role: 'Recursos Humanos',
     cuit: '30-57672171-0',
-    email: 'contacto@sullair.com',
+    email: 'valid-app+sullair@ma-no.work',
     phone: '+54 9 11 1234-5678',
     razon_social: 'SULLAIR ARGENTINA SA',
     created_at: now,
@@ -34,7 +29,7 @@ export const DB_PROVIDERS: DbProvider[] = [
     contact_name: 'Nombre del responsable',
     contact_role: 'Gerente de Operaciones',
     cuit: '30-71234567-8',
-    email: 'tecno@eventos.com',
+    email: 'valid-app+eventos@ma-no.work',
     phone: '+54 9 11 1234-5678',
     razon_social: 'TECNO EVENTOS SRL',
     created_at: now,
@@ -46,7 +41,7 @@ export const DB_PROVIDERS: DbProvider[] = [
     contact_name: 'Nombre del responsable',
     contact_role: 'Dueño',
     cuit: '30-61234567-9',
-    email: 'info@iluminacionpro.com',
+    email: 'valid-app+iluminacionpro@ma-no.work',
     phone: '+54 9 11 1234-5678',
     razon_social: 'ILUMINACIÓN PRO SA',
     created_at: now,
@@ -58,7 +53,7 @@ export const DB_PROVIDERS: DbProvider[] = [
     contact_name: 'Nombre del responsable',
     contact_role: 'Director Técnico',
     cuit: '30-81234567-0',
-    email: 'sonido@master.com',
+    email: 'valid-app+master@ma-no.work',
     phone: '+54 9 11 1234-5678',
     razon_social: 'SONIDO MASTER SRL',
     created_at: now,
@@ -70,7 +65,7 @@ export const DB_PROVIDERS: DbProvider[] = [
     contact_name: 'Nombre del responsable',
     contact_role: 'Gerente de Operaciones',
     cuit: '30-91234567-1',
-    email: 'estructuras@elite.com',
+    email: 'valid-app+elite@ma-no.work',
     phone: '+54 9 11 1234-5678',
     razon_social: 'ESTRUCTURAS ELITE SA',
     created_at: now,
@@ -152,13 +147,14 @@ export const DB_EVENTS: DbEvent[] = [
 
 /** event_providers (N:M); una fila por (event_id, provider_id) */
 function buildEventProviders(): DbEventProvider[] {
-  const statusByProvider: Record<string, 'pending' | 'approved' | 'rejected' | 'error'> = {
-    p1: 'error',
-    p2: 'approved',
-    p3: 'error',
-    p4: 'approved',
-    p5: 'approved',
-  }
+  const statusByProvider: Record<string, 'pending' | 'approved' | 'rejected' | 'error'> =
+    {
+      p1: 'error',
+      p2: 'approved',
+      p3: 'error',
+      p4: 'approved',
+      p5: 'approved',
+    }
   const employeeCountByProvider: Record<string, number> = {
     p1: 17,
     p2: 12,
@@ -166,8 +162,8 @@ function buildEventProviders(): DbEventProvider[] {
     p4: 15,
     p5: 0,
   }
-  const eventIds = DB_EVENTS.map((e) => e.id)
-  const providerIds = DB_PROVIDERS.map((p) => p.id)
+  const eventIds = DB_EVENTS.map(e => e.id)
+  const providerIds = DB_PROVIDERS.map(p => p.id)
   const rows: DbEventProvider[] = []
   for (const eventId of eventIds) {
     for (const providerId of providerIds) {
@@ -187,7 +183,7 @@ function buildEventProviders(): DbEventProvider[] {
 export const DB_EVENT_PROVIDERS: DbEventProvider[] = buildEventProviders()
 
 export const getEventProvidersForEvent = (eventId: string): DbEventProvider[] =>
-  DB_EVENT_PROVIDERS.filter((ep) => ep.event_id === eventId)
+  DB_EVENT_PROVIDERS.filter(ep => ep.event_id === eventId)
 
 /** validation_errors (por evento; demo para evento actual) */
 export const DB_VALIDATION_ERRORS: DbValidationError[] = [

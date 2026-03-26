@@ -11,7 +11,10 @@ import type { Event } from '@/types'
 
 const PROVEEDOR_ID = 'p1'
 
-const DEMO_COUNTS: Record<string, { aprobados: number; pendientes: number; rechazados: number }> = {
+const DEMO_COUNTS: Record<
+  string,
+  { aprobados: number; pendientes: number; rechazados: number }
+> = {
   e0: { aprobados: 0, pendientes: 17, rechazados: 0 },
   e1: { aprobados: 14, pendientes: 3, rechazados: 0 },
   e2: { aprobados: 3, pendientes: 17, rechazados: 0 },
@@ -27,10 +30,10 @@ const getCounts = (event: Event) =>
 
 export default function ProveedorDashboardPage() {
   const [events, setEvents] = useState<Event[]>([])
-  const venueById = Object.fromEntries(VENUES.map((v) => [v.id, v]))
-  const eventsForProvider = events.filter((e) => e.providerIds.includes(PROVEEDOR_ID))
+  const venueById = Object.fromEntries(VENUES.map(v => [v.id, v]))
+  const eventsForProvider = events.filter(e => e.providerIds.includes(PROVEEDOR_ID))
   const totalWorkers = eventsForProvider.reduce((s, e) => s + (e.employeeCount ?? 0), 0)
-  const provider = getProviders().find((p) => p.id === PROVEEDOR_ID)
+  const provider = getProviders().find(p => p.id === PROVEEDOR_ID)
 
   useEffect(function setup() {
     const t = setTimeout(() => setEvents(getEvents()), 0)
@@ -85,72 +88,83 @@ export default function ProveedorDashboardPage() {
       <div className="events-grid">
         {eventsForProvider.map(
           // eslint-disable-next-line arrow-body-style -- need block to compute counts once
-          (event) => {
-          const counts = getCounts(event)
-          return (
-            <EventCard
-              badgeCenter={
-                <Badge
-                  as="div"
-                  className="whitespace-nowrap px-5 py-3 text-sm font-bold"
-                  variant="surface"
-                >
-                  {event.dateDisplay ?? event.date}
-                </Badge>
-              }
-              badgeTopLeft={
-                <Badge
-                  className="px-[18px] py-2.5 text-xs font-bold shadow-(--shadow)"
-                  variant={
-                    event.statusProvider === 'Documentación Aprobada'
-                      ? 'success'
-                      : event.statusProvider === 'Documentación Rechazada'
-                        ? 'rejected'
-                        : 'pending'
-                  }
-                >
-                  {event.statusProvider ?? 'Cargar Documentación'}
-                </Badge>
-              }
-              badgeTopRight={
-                event.isNew ? (
+          event => {
+            const counts = getCounts(event)
+            return (
+              <EventCard
+                badgeCenter={
                   <Badge
-                    className="px-3 py-1.5 text-[10px] font-bold tracking-wider"
-                    variant="rejected"
+                    as="div"
+                    className="px-5 py-3 text-sm font-bold whitespace-nowrap"
+                    variant="surface"
                   >
-                    NUEVO
+                    {event.dateDisplay ?? event.date}
                   </Badge>
-                ) : undefined
-              }
-              href={`/proveedor/eventos/${event.id}`}
-              image={
-                <div
-                  className="absolute inset-0"
-                  style={
-                    event.flyerUrl
-                      ? {
-                          backgroundImage: `url(${event.flyerUrl})`,
-                          backgroundPosition: 'center',
-                          backgroundSize: 'cover',
-                        }
-                      : undefined
-                  }
-                />
-              }
-              imageHeight={160}
-              key={event.id}
-              stats={[
-                { label: 'Pendientes', value: counts.pendientes, valueClassName: 'pending' },
-                { label: 'Aprobados', value: counts.aprobados, valueClassName: 'approved' },
-                { label: 'Rechazados', value: counts.rechazados, valueClassName: 'rejected' },
-              ]}
-              subtitle={`📍 ${venueById[event.venueId]?.name ?? event.venueId}`}
-              title={event.name}
-            />
-          )
-        }
-        )
-        }
+                }
+                badgeTopLeft={
+                  <Badge
+                    className="px-[18px] py-2.5 text-xs font-bold shadow-(--shadow)"
+                    variant={
+                      event.statusProvider === 'Documentación Aprobada'
+                        ? 'success'
+                        : event.statusProvider === 'Documentación Rechazada'
+                          ? 'rejected'
+                          : 'pending'
+                    }
+                  >
+                    {event.statusProvider ?? 'Cargar Documentación'}
+                  </Badge>
+                }
+                badgeTopRight={
+                  event.isNew ? (
+                    <Badge
+                      className="px-3 py-1.5 text-[10px] font-bold tracking-wider"
+                      variant="rejected"
+                    >
+                      NUEVO
+                    </Badge>
+                  ) : undefined
+                }
+                href={`/proveedor/eventos/${event.id}`}
+                image={
+                  <div
+                    className="absolute inset-0"
+                    style={
+                      event.flyerUrl
+                        ? {
+                            backgroundImage: `url(${event.flyerUrl})`,
+                            backgroundPosition: 'center',
+                            backgroundSize: 'cover',
+                          }
+                        : undefined
+                    }
+                  />
+                }
+                imageHeight={160}
+                key={event.id}
+                stats={[
+                  {
+                    label: 'Pendientes',
+                    value: counts.pendientes,
+                    valueClassName: 'pending',
+                  },
+                  {
+                    label: 'Aprobados',
+                    value: counts.aprobados,
+                    valueClassName: 'approved',
+                  },
+                  {
+                    label: 'Rechazados',
+                    value: counts.rechazados,
+                    valueClassName: 'rejected',
+                  },
+                ]}
+                subtitle={`📍 ${venueById[event.venueId]?.name ?? event.venueId}`}
+                title={event.name}
+              />
+            )
+          }
+        )}
       </div>
 
       {/* Quick Actions */}

@@ -3,15 +3,16 @@ import { dbEventToApp, getProviderIdsByEventId } from '@/lib/adapters/db-to-app'
 import type { Event } from '@/types'
 
 const KEY = 'valid_events'
-const MOCK_IDS = new Set(DB_EVENTS.map((e) => e.id))
+const MOCK_IDS = new Set(DB_EVENTS.map(e => e.id))
 const providerIdsByEvent = getProviderIdsByEventId(DB_EVENT_PROVIDERS)
 const IS_NEW_IDS = new Set(['e0', 'e1', 'e2'])
 
-const buildSeedEvents = (): Event[] => DB_EVENTS.map((db) =>
+const buildSeedEvents = (): Event[] =>
+  DB_EVENTS.map(db =>
     dbEventToApp(db, providerIdsByEvent.get(db.id) ?? [], {
       isNew: IS_NEW_IDS.has(db.id),
     })
-  );
+  )
 
 const SEED_EVENTS = buildSeedEvents()
 
@@ -25,7 +26,7 @@ function read(): Event[] {
   try {
     const raw = window.localStorage.getItem(KEY)
     const stored: Event[] = raw ? (JSON.parse(raw) as Event[]) : []
-    const userEvents = stored.filter((e) => !MOCK_IDS.has(e.id))
+    const userEvents = stored.filter(e => !MOCK_IDS.has(e.id))
     const merged = [...SEED_EVENTS, ...userEvents]
     if (userEvents.length > 0) {
       window.localStorage.setItem(KEY, JSON.stringify(merged))
@@ -55,7 +56,7 @@ export function addEvent(event: Omit<Event, 'id'>): Event {
 
 export function updateEvent(id: string, patch: Partial<Event>): void {
   const events = read()
-  const i = events.findIndex((e) => e.id === id)
+  const i = events.findIndex(e => e.id === id)
   if (i === -1) {
     return
   }

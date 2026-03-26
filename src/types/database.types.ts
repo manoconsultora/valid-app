@@ -30,6 +30,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       provider_categories: {
         Row: {
@@ -53,6 +54,49 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
+      }
+      provider_invitations: {
+        Row: {
+          id: string
+          resource_id: string
+          supabase_user_id: string | null
+          invited_email: string
+          invited_role: string
+          invite_status: 'accepted' | 'invalid' | 'pending'
+          sent_at: string
+          accepted_at: string | null
+          last_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          resource_id: string
+          supabase_user_id?: string | null
+          invited_email: string
+          invited_role?: string
+          invite_status?: 'accepted' | 'invalid' | 'pending'
+          sent_at?: string
+          accepted_at?: string | null
+          last_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          resource_id?: string
+          supabase_user_id?: string | null
+          invited_email?: string
+          invited_role?: string
+          invite_status?: 'accepted' | 'invalid' | 'pending'
+          sent_at?: string
+          accepted_at?: string | null
+          last_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       providers: {
         Row: {
@@ -94,14 +138,16 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
     }
+    Views: Record<string, never>
     Enums: {
       app_role: 'admin' | 'provider'
     }
     Functions: {
       assign_user_role: {
-        Args: { target_user_id: string; new_role: 'admin' | 'provider' }
+        Args: { new_role: 'admin' | 'provider'; target_user_id: string }
         Returns: undefined
       }
     }
