@@ -2,23 +2,34 @@ import type { AuthSession, SupabaseClient } from '@supabase/supabase-js'
 
 import { dbUserToApp } from '@/lib/adapters/db-to-app'
 import type { User } from '@/types'
-import type { DbUser } from '@/types/db'
 import type { Database } from '@/types/database.types'
+import type { DbUser } from '@/types/db'
 
-/** Rol siempre desde public.users; nunca desde raw_user_meta_data (auth-rbac). */
+/**
+ * Carga el perfil del usuario desde public.users.
+ * El rol se lee de app_metadata si está disponible (metadata-first),
+ * con fallback al valor de la tabla para usuarios sin app_metadata aún.
+ */
 export async function fetchProfile(
   supabase: SupabaseClient<Database>,
   userId: string
 ): Promise<User | null> {
-  const { data, error } = await supabase
-    .from('users')
-    .select('id, email, name, role')
-    .eq('id', userId)
-    .single()
-  if (error || !data) {
+  const [{ data: authData }, { data: row, error }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('users').select('id, email, name, role').eq('id', userId).single(),
+  ])
+  if (error || !row) {
     return null
   }
-  return dbUserToApp(data as DbUser)
+
+  const dbUser = row as DbUser
+  const metaRole = authData?.user?.app_metadata?.role
+  const role =
+    metaRole === 'admin' || metaRole === 'provider'
+      ? (metaRole as 'admin' | 'provider')
+      : dbUser.role
+
+  return dbUserToApp({ ...dbUser, role })
 }
 
 export async function getInitialSession(
@@ -39,11 +50,10 @@ export async function performSignIn(
   session: AuthSession | null
   user: User | null
 }> {
-  const { data, error: signInError } =
-    await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    })
+  const { data, error: signInError } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  })
   if (signInError) {
     const message =
       signInError.message === 'Invalid login credentials'
@@ -51,8 +61,7 @@ export async function performSignIn(
         : signInError.message
     return { error: message, session: null, user: null }
   }
-  const profile =
-    data.user?.id ? await fetchProfile(supabase, data.user.id) : null
+  const profile = data.user?.id ? await fetchProfile(supabase, data.user.id) : null
   if (!profile) {
     await supabase.auth.signOut()
     return {
@@ -62,11 +71,7 @@ export async function performSignIn(
       user: null,
     }
   }
-  return {
-    error: null,
-    session: data.session ?? null,
-    user: profile,
-  }
+  return { error: null, session: data.session ?? null, user: profile }
 }
 
 export async function signOut(supabase: SupabaseClient<Database>): Promise<void> {

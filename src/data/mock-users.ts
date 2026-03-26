@@ -21,6 +21,5 @@ export const MOCK_USERS: User[] = [
     name: 'Proveedor Empresa',
     passwordHint: 'prov123',
     role: 'provider',
-   
   },
 ]

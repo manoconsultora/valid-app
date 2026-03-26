@@ -1,0 +1,311 @@
+---
+description: Leer un PRD generado por feature-analyst y diseñar el schema de DB con mejores prácticas, luego encadenar con auth-security y sql-scripts
+globs: "docs/PRD_*.md"
+alwaysApply: false
+---
+
+# DB Architect — de PRD a schema + scripts SQL
+
+Consumir el PRD generado por `feature-analyst` y producir:
+1. Schema de DB documentado
+2. Auditoría de seguridad (delegada a `auth-security`)
+3. Scripts SQL listos para Supabase (delegados a `sql-scripts` + `supabase-gotchas`)
+
+---
+
+## Contexto del stack — siempre presente
+
+Esta rule opera sobre un proyecto **Next.js + Supabase**. Tener en cuenta en cada decisión de diseño:
+
+| Decisión | Cómo se resuelve en este stack |
+|---|---|
+| Autenticación | Supabase Auth — `auth.users` es la fuente de verdad de identidad |
+| Usuarios de la app | `public.users` con FK a `auth.users(id)` — roles `admin` o `provider` |
+| Archivos / imágenes | Supabase Storage — guardar solo la URL pública en la DB, nunca binarios |
+| Autorización en DB | RLS con `auth.uid()` — toda tabla con datos de usuario debe tenerlo |
+| Crear usuario con acceso | `supabase.auth.admin.createUser()` desde Server Action — nunca desde cliente |
+| IDs | `UUID DEFAULT gen_random_uuid()` — nunca SERIAL |
+| Fechas | `TIMESTAMPTZ` — nunca TIMESTAMP |
+| Rol del usuario | Se lee de `public.users.role` — nunca de `user_metadata` |
+
+---
+
+## Paso 1 — Leer y validar el PRD
+
+Antes de diseñar nada, verificar que el PRD contiene:
+- [ ] Lista de campos con tipos
+- [ ] Relaciones definidas
+- [ ] Roles con acceso
+- [ ] Reglas de negocio
+- [ ] Campos sensibles identificados
+
+Si falta alguna sección crítica, pedirla al usuario antes de continuar.
+
+---
+
+## Paso 2 — Diseñar el schema
+
+### Mapeo de tipos: formulario → PostgreSQL
+
+| Tipo en PRD | Tipo PostgreSQL | Notas |
+|---|---|---|
+| TEXT (nombre, descripción) | `TEXT` | Nunca VARCHAR arbitrario |
+| TEXT (email) | `TEXT` | + constraint CHECK formato |
+| TEXT (teléfono) | `TEXT` | Guardar como string, no número |
+| TEXT (CUIT) | `TEXT` | Formato `XX-XXXXXXXX-X`, validar con CHECK |
+| Enum fijo | `CREATE TYPE nombre AS ENUM(...)` | Antes que la tabla |
+| Enum variable | Tabla de lookup separada | Si puede crecer |
+| Número entero | `INTEGER` o `BIGINT` | Según rango |
+| Decimal / precio | `NUMERIC(12,2)` | Nunca FLOAT |
+| Fecha | `DATE` | Sin hora |
+| Fecha + hora | `TIMESTAMPTZ` | Nunca TIMESTAMP |
+| Booleano | `BOOLEAN NOT NULL DEFAULT false` | |
+| Archivo / imagen | `TEXT` (URL en Supabase Storage) | No guardar binarios en DB |
+| Relación 1:N | `UUID REFERENCES tabla(id)` | Con ON DELETE explícito |
+| Relación N:M | Tabla junction separada | Con PKs compuestas o UUID propio |
+| Credenciales | Ver sección específica abajo | |
+
+### Reglas de diseño obligatorias
+
+**Toda tabla nueva debe tener:**
+```sql
+id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+-- + trigger set_updated_at
+```
+
+**Soft delete para entidades que pueden "desactivarse":**
+```sql
+deleted_at  TIMESTAMPTZ DEFAULT NULL  -- NULL = activo
+```
+
+**Constraints obligatorios:**
+- `NOT NULL` en campos requeridos según PRD
+- `UNIQUE` en campos que son clave natural (email, CUIT, slug)
+- `CHECK` para validar formatos (CUIT, email, rangos numéricos)
+- `REFERENCES` con `ON DELETE` explícito en toda FK
+
+**Índices obligatorios:**
+- En toda FK (Supabase no los crea automáticamente)
+- En columnas usadas en WHERE frecuentes según reglas de negocio
+- En `deleted_at` si se usa soft delete
+
+### Credenciales de acceso — invite flow (cualquier entidad)
+
+Si el formulario incluye "Generar Credenciales" o similar, aplicar este patrón independientemente de la entidad (proveedor, administrador, operador, etc.):
+
+```
+✅ Flujo genérico:
+
+1. Server Action llama supabase.auth.admin.createUser() con:
+   - email: el email del nuevo usuario
+   - email_confirm: true       → auto-aprobado, sin verificación
+   - user_metadata: { role }   → el trigger lo lee para asignar el rol
+
+2. Supabase envía automáticamente un email al usuario
+   con link para que CREE su propia contraseña
+   → Nunca se genera ni envía una contraseña por mail
+
+3. El trigger handle_new_user lee user_metadata.role
+   e inserta en public.users con el rol correspondiente
+   → Si no viene rol en metadata, inserta NULL (flujo estándar)
+
+4. La tabla de la entidad guarda user_id (FK a auth.users)
+   — nunca datos de autenticación
+```
+
+**Server Action — template genérico:**
+```ts
+'use server'
+import { createServerClient } from '@/lib/supabase/server'
+import { requireRole } from '@/lib/auth/roles'
+import type { AppRole } from '@/types/domain.types'
+
+// Reutilizable para cualquier entidad que necesite crear un usuario con acceso
+export async function createUserWithInvite(
+  email: string,
+  fullName: string,
+  role: AppRole,
+  callerRole: AppRole = 'admin'   // qué rol necesita quien ejecuta esta acción
+) {
+  await requireRole(callerRole)
+
+  const supabase = await createServerClient()
+
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName,
+      role,               // el trigger handle_new_user lo lee
+    },
+  })
+
+  if (error) throw new Error(error.message)
+  return data.user
+}
+```
+
+**Trigger `handle_new_user` — versión con soporte para invite flow:**
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  assigned_role app_role;
+BEGIN
+  -- Leer rol de metadata si viene (invite flow)
+  -- Si no viene, NULL → asignación manual posterior
+  assigned_role := CASE NEW.raw_user_meta_data->>'role'
+    WHEN 'admin'    THEN 'admin'::app_role
+    WHEN 'provider' THEN 'provider'::app_role
+    ELSE NULL
+  END;
+
+  INSERT INTO public.users (id, email, name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data->>'full_name',
+    assigned_role
+  );
+  RETURN NEW;
+END;
+$$;
+
+ALTER FUNCTION public.handle_new_user() OWNER TO postgres;
+```
+
+> ⚠️ Si se agregan roles nuevos al enum `app_role`, actualizar el CASE en este trigger.
+
+```
+❌ Nunca — independientemente de la entidad:
+- Generar o enviar contraseñas por email manualmente
+- Guardar contraseñas o tokens en tablas de public.*
+- INSERT directo en auth.users
+- Llamar supabase.auth.admin desde el cliente
+- Usar user_metadata para autorización posterior (solo para el trigger)
+```
+
+---
+
+## Paso 3 — Generar documento de schema
+
+Producir `docs/SCHEMA_[nombre-entidad].md` con este formato:
+
+```markdown
+# Schema — [Nombre Entidad]
+
+## Tablas
+
+### `public.[nombre_tabla]`
+| Columna | Tipo | Nullable | Default | Constraint | Notas |
+|---------|------|----------|---------|------------|-------|
+| id | UUID | NO | gen_random_uuid() | PK | |
+| razon_social | TEXT | NO | — | | Razón social legal |
+| cuit | TEXT | NO | — | UNIQUE, CHECK formato | Formato XX-XXXXXXXX-X |
+| ... | | | | | |
+
+### `public.[tabla_junction]` (si aplica)
+[misma estructura]
+
+## ENUMs
+[Lista de ENUMs con sus valores]
+
+## Relaciones
+[Diagrama textual de relaciones]
+
+## Índices
+[Lista de índices a crear y por qué]
+
+## RLS por rol
+| Tabla | Operación | Rol | Condición |
+|-------|-----------|-----|-----------|
+| proveedores | SELECT | admin | true |
+| proveedores | SELECT | provider | id = auth.uid() |
+| ... | | | |
+
+## Triggers necesarios
+- `set_updated_at` en cada tabla nueva
+- [otros triggers de negocio]
+
+## Server Actions necesarias
+- `createProveedor(data)` — crea proveedor + genera credenciales
+- `updateProveedor(id, data)` — actualiza campos editables
+- `deleteProveedor(id)` — soft delete
+- `listProveedores()` — lista con filtros según rol
+```
+
+---
+
+## Paso 4 — Auditoría de seguridad
+
+Antes de generar los scripts, aplicar la rule `auth-security` al schema diseñado.
+
+Verificar explícitamente:
+- [ ] ¿Algún campo sensible (contraseña, token, key) se guarda en texto plano? → **BLOQUEANTE**
+- [ ] ¿Las credenciales se generan server-side? → Si no → **BLOQUEANTE**
+- [ ] ¿RLS está definido para cada tabla y cada operación?
+- [ ] ¿Las políticas de INSERT permiten a `postgres` insertar (para triggers)?
+- [ ] ¿Los campos de solo-admin tienen políticas restrictivas?
+- [ ] ¿Los inputs de texto libre tienen validación contra inyección SQL en Zod?
+- [ ] ¿CUIT u otros identificadores tienen CHECK constraints en DB?
+
+Si hay items **BLOQUEANTES**, reportarlos y esperar confirmación antes de continuar.
+
+---
+
+## Paso 5 — Generar scripts SQL
+
+Con el schema validado, aplicar las rules `sql-scripts` y `supabase-gotchas` para generar los scripts en `scripts/`:
+
+**Orden de scripts a generar:**
+1. `NNN_[entidad]_enums.sql` — ENUMs y tipos (si los hay)
+2. `NNN_[entidad]_tables.sql` — Tablas con constraints e índices
+3. `NNN_[entidad]_functions.sql` — Funciones y triggers
+4. `NNN_[entidad]_rls.sql` — RLS y políticas
+
+Cada script debe:
+- Respetar la numeración existente en `scripts/` (listar archivos antes)
+- Incluir cabecera con dependencias
+- Ser idempotente
+- Terminar con bloque `-- ✅ VERIFICACIÓN`
+
+---
+
+## Paso 6 — Generar schema Zod compartido
+
+Producir `src/lib/validations/[entidad].ts` con el schema Zod del PRD,
+listo para usar en React Hook Form y Server Actions:
+
+```ts
+import { z } from 'zod'
+
+// Validación de CUIT argentino XX-XXXXXXXX-X
+const cuitRegex = /^\d{2}-\d{8}-\d{1}$/
+
+export const proveedorSchema = z.object({
+  razon_social: z.string().min(2).max(200).trim(),
+  cuit: z.string().regex(cuitRegex, 'Formato inválido. Ej: 30-12345678-9'),
+  // ... resto de campos del PRD
+})
+
+export type ProveedorFormData = z.infer<typeof proveedorSchema>
+```
+
+---
+
+## Resumen del output de db-architect
+
+Al terminar, confirmar que se generaron:
+- [ ] `docs/SCHEMA_[entidad].md`
+- [ ] `scripts/NNN_[entidad]_enums.sql` (si aplica)
+- [ ] `scripts/NNN_[entidad]_tables.sql`
+- [ ] `scripts/NNN_[entidad]_functions.sql`
+- [ ] `scripts/NNN_[entidad]_rls.sql`
+- [ ] `src/lib/validations/[entidad].ts`
+- [ ] Auditoría de seguridad completada sin items BLOQUEANTES

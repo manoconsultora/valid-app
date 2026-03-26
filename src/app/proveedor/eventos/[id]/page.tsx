@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { ValidationCard } from '@/components/ui/ValidationCard'
 import { useValidacionADocs } from '@/hooks/useValidacionADocs'
 import { VENUES } from '@/lib/constants'
@@ -40,12 +41,15 @@ export default function ProveedorEventoPage() {
 
   useEffect(
     () =>
-      ((t: ReturnType<typeof setTimeout>) => () => clearTimeout(t))(
+      (
+        (t: ReturnType<typeof setTimeout>) => () =>
+          clearTimeout(t)
+      )(
         setTimeout(
           () =>
             setEvent(
               getEvents().find(
-                (e) => e.id === id && e.providerIds.includes(PROVEEDOR_ID)
+                e => e.id === id && e.providerIds.includes(PROVEEDOR_ID)
               ) ?? null
             ),
           0
@@ -54,12 +58,10 @@ export default function ProveedorEventoPage() {
     [id]
   )
 
-  const provider = getProviders().find((p) => p.id === PROVEEDOR_ID)
-  const venue = event ? VENUES.find((v) => v.id === event.venueId) : null
+  const provider = getProviders().find(p => p.id === PROVEEDOR_ID)
+  const venue = event ? VENUES.find(v => v.id === event.venueId) : null
   const otherEvents = event
-    ? getEvents().filter(
-        (e) => e.id !== event.id && e.providerIds.includes(PROVEEDOR_ID)
-      )
+    ? getEvents().filter(e => e.id !== event.id && e.providerIds.includes(PROVEEDOR_ID))
     : []
 
   const progressPercentB = excelFile ? 100 : 0
@@ -89,9 +91,7 @@ export default function ProveedorEventoPage() {
 
   const submitDocsB = useCallback(() => {
     updateEvent(id, { statusProvider: 'Documentación Aprobada' })
-    setEvent((e) =>
-      e ? { ...e, statusProvider: 'Documentación Aprobada' } : null
-    )
+    setEvent(e => (e ? { ...e, statusProvider: 'Documentación Aprobada' } : null))
     setExcelFile(null)
     closeModalB()
   }, [id, closeModalB])
@@ -99,36 +99,30 @@ export default function ProveedorEventoPage() {
   if (!event) {
     return (
       <div className="dashboard-container">
-        <Link
-          className="back-btn"
-          href="/proveedor"
-        >
-          ← Volver
-        </Link>
+        <div className="event-detail-header">
+          <Link
+            aria-label="Volver al dashboard"
+            className="back-button"
+            href="/proveedor"
+          >
+            ←
+          </Link>
+        </div>
         <p className="mt-4 text-(--muted)">Evento no encontrado.</p>
       </div>
     )
   }
 
-  const statusLabel =
-    event.statusProvider ?? 'Cargar Documentación'
+  const statusLabel = event.statusProvider ?? 'Cargar Documentación'
   const isApproved = event.statusProvider === 'Documentación Aprobada'
   const isRejected = event.statusProvider === 'Documentación Rechazada'
   const timeRangeParts = event.timeRange?.split(' - ') ?? ['—', '—']
-  const badgeVariant = isApproved
-    ? 'success'
-    : isRejected
-      ? 'rejected'
-      : 'pending'
+  const badgeVariant = isApproved ? 'success' : isRejected ? 'rejected' : 'pending'
 
   return (
     <div className="dashboard-container">
       <div className="event-detail-header">
-        <Link
-          aria-label="Volver al dashboard"
-          className="back-button"
-          href="/proveedor"
-        >
+        <Link aria-label="Volver al dashboard" className="back-button" href="/proveedor">
           ←
         </Link>
       </div>
@@ -199,8 +193,7 @@ export default function ProveedorEventoPage() {
               description={
                 <>
                   Validación de documentación de seguros de{' '}
-                  {provider?.razonSocial ?? 'tu empresa'} contra el protocolo
-                  del evento
+                  {provider?.razonSocial ?? 'tu empresa'} contra el protocolo del evento
                 </>
               }
               details={[
@@ -238,8 +231,7 @@ export default function ProveedorEventoPage() {
               resultText={
                 <>
                   16 empleados fueron validados correctamente.
-                  <br />
-                  1 empleado NO figura en la nómina ART de{' '}
+                  <br />1 empleado NO figura en la nómina ART de{' '}
                   {provider?.razonSocial ?? 'tu empresa'}.
                 </>
               }
@@ -250,9 +242,7 @@ export default function ProveedorEventoPage() {
               type="Validación B"
             >
               <div className="employees-section">
-                <div className="employees-header">
-                  Empleados sin cobertura ART:
-                </div>
+                <div className="employees-header">Empleados sin cobertura ART:</div>
                 <div className="employee-item">
                   <div className="employee-avatar">PL</div>
                   <div className="employee-info">
@@ -264,13 +254,13 @@ export default function ProveedorEventoPage() {
                   <div className="employee-reason">No figura en nómina</div>
                 </div>
               </div>
-              <button
-                className="action-button"
+              <Button
+                className="mt-4 w-full font-bold"
                 onClick={() => setModalB(true)}
-                type="button"
+                variant="gradient"
               >
                 🔄 Corregir y Re-enviar
-              </button>
+              </Button>
             </ValidationCard>
           </>
         ) : isApproved ? (
@@ -279,8 +269,8 @@ export default function ProveedorEventoPage() {
               <div className="success-icon">✅</div>
               <div className="success-title">¡Proveedor Autorizado!</div>
               <div className="success-message">
-                Toda la documentación ha sido validada correctamente. Tu equipo
-                puede trabajar en este evento.
+                Toda la documentación ha sido validada correctamente. Tu equipo puede
+                trabajar en este evento.
               </div>
             </div>
             <div className="section-header">
@@ -291,8 +281,7 @@ export default function ProveedorEventoPage() {
               description={
                 <>
                   Validación de documentación de seguros de{' '}
-                  {provider?.razonSocial ?? 'tu empresa'} contra el protocolo
-                  del evento
+                  {provider?.razonSocial ?? 'tu empresa'} contra el protocolo del evento
                 </>
               }
               details={[
@@ -329,8 +318,7 @@ export default function ProveedorEventoPage() {
               resultText={
                 <>
                   • 12 empleados validados correctamente
-                  <br />
-                  • Todos figuran en nómina ART de{' '}
+                  <br />• Todos figuran en nómina ART de{' '}
                   {provider?.razonSocial ?? 'tu empresa'}
                   <br />
                   • Coberturas vigentes al día del evento
@@ -354,8 +342,7 @@ export default function ProveedorEventoPage() {
               description={
                 <>
                   Validación de documentación de seguros de{' '}
-                  {provider?.razonSocial ?? 'tu empresa'} contra el protocolo del
-                  evento
+                  {provider?.razonSocial ?? 'tu empresa'} contra el protocolo del evento
                 </>
               }
               details={[
@@ -392,7 +379,7 @@ export default function ProveedorEventoPage() {
         <div className="other-events">
           <div className="carousel-title">Otros Eventos Activos</div>
           <div className="carousel">
-            {otherEvents.map((e) => (
+            {otherEvents.map(e => (
               <Link
                 className="carousel-item"
                 href={`/proveedor/eventos/${e.id}`}
@@ -406,30 +393,13 @@ export default function ProveedorEventoPage() {
                 />
                 <div className="carousel-content">
                   <div className="carousel-event-name">{e.name}</div>
-                  <div className="carousel-event-date">
-                    {e.dateDisplay ?? e.date}
-                  </div>
+                  <div className="carousel-event-date">{e.dateDisplay ?? e.date}</div>
                 </div>
               </Link>
             ))}
           </div>
         </div>
       )}
-
-      <div className="debug-buttons">
-        <Link
-          className="debug-btn debug-btn-success"
-          href={`/proveedor/eventos/${id}/validacion`}
-        >
-          ✓ Ver Estado de Validación
-        </Link>
-        <Link
-          className="debug-btn debug-btn-error"
-          href={`/proveedor/eventos/${id}/validacion`}
-        >
-          Ver resultados
-        </Link>
-      </div>
 
       {/* Modal A: Documentos Corporativos */}
       {modalA && (
@@ -440,17 +410,14 @@ export default function ProveedorEventoPage() {
           onClick={closeModalA}
           role="dialog"
         >
-          <div
-            className="modal-container"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal-container" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title" id="modal-a-title">
                 📄 Documentos Corporativos
               </div>
               <button
                 aria-label="Cerrar"
-                className="modal-close"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-(--stroke) bg-(--surface) text-xl text-(--muted) transition hover:rotate-90 hover:bg-white hover:text-(--text)"
                 onClick={closeModalA}
                 type="button"
               >
@@ -459,22 +426,18 @@ export default function ProveedorEventoPage() {
             </div>
             <div className="modal-body">
               <div className="modal-section">
-                <div className="modal-section-title">
-                  Protocolo del Evento
-                </div>
+                <div className="modal-section-title">Protocolo del Evento</div>
                 <div className="modal-section-desc">
                   Revisá los requisitos antes de subir documentación
                 </div>
                 <div className="protocol-box">
                   <div className="protocol-icon">📋</div>
                   <div className="protocol-info">
-                    <div className="protocol-name">
-                      Protocolo_LVP_2024.pdf
-                    </div>
+                    <div className="protocol-name">Protocolo_LVP_2024.pdf</div>
                     <div className="protocol-size">2.4 MB</div>
                   </div>
                   <button
-                    className="btn-download"
+                    className="cursor-pointer rounded-[10px] border border-(--stroke) bg-(--surface) px-3.5 py-2 text-[11px] font-semibold text-(--text) transition hover:bg-white hover:shadow-(--shadow-soft)"
                     onClick={() => undefined}
                     type="button"
                   >
@@ -510,30 +473,27 @@ export default function ProveedorEventoPage() {
                       <input
                         accept=".pdf"
                         multiple
-                        onChange={(e) => handleDocUpload(num, e.target.files)}
-                        ref={(el) => void (fileInputRefs.current[num] = el)}
+                        onChange={e => handleDocUpload(num, e.target.files)}
+                        ref={el => void (fileInputRefs.current[num] = el)}
                         style={{ display: 'none' }}
                         type="file"
                       />
-                      <button
-                        className="doc-input-button"
+                      <Button
                         onClick={() => fileInputRefs.current[num]?.click()}
-                        type="button"
+                        size="sm"
+                        variant="gradient"
                       >
                         📎 Seleccionar PDF(s) - Máx. {MAX_FILES_PER_DOC}
-                      </button>
+                      </Button>
                       <div className="doc-input-filelist">
                         {files.map((file, i) => (
                           <div className="doc-file-item" key={i}>
-                            <span
-                              className="doc-file-name"
-                              title={file.name}
-                            >
+                            <span className="doc-file-name" title={file.name}>
                               {file.name}
                             </span>
                             <button
                               aria-label={`Quitar ${file.name}`}
-                              className="doc-file-remove"
+                              className="text-rejected hover:bg-rejected bg-rejected-soft-bg flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-xs transition hover:text-white"
                               onClick={() => removeFileA(num, i)}
                               type="button"
                             >
@@ -548,21 +508,21 @@ export default function ProveedorEventoPage() {
               })}
             </div>
             <div className="modal-footer">
-              <button
-                className="btn btn-cancel"
+              <Button
+                className="flex-1 py-3.5 font-bold"
                 onClick={closeModalA}
-                type="button"
+                variant="ghost"
               >
                 Cancelar
-              </button>
-              <button
-                className="btn btn-primary"
+              </Button>
+              <Button
+                className="flex-1 py-3.5 font-bold"
                 disabled={!canSubmitA}
                 onClick={submitDocsA}
-                type="button"
+                variant="gradient"
               >
                 Enviar Documentos
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -577,17 +537,14 @@ export default function ProveedorEventoPage() {
           onClick={closeModalB}
           role="dialog"
         >
-          <div
-            className="modal-container"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal-container" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title" id="modal-b-title">
                 👥 Empleados del Evento
               </div>
               <button
                 aria-label="Cerrar"
-                className="modal-close"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-(--stroke) bg-(--surface) text-xl text-(--muted) transition hover:rotate-90 hover:bg-white hover:text-(--text)"
                 onClick={closeModalB}
                 type="button"
               >
@@ -597,17 +554,15 @@ export default function ProveedorEventoPage() {
             <div className="modal-body">
               <div className="modal-section">
                 <div className="modal-section-desc">
-                  Subí el Excel con los empleados que trabajarán en este evento.
-                  CREW validará automáticamente contra todos los documentos
-                  corporativos cargados en la Validación A (ART, AP, CAT, SVO,
-                  CNR, Nómina Vigente, F931).
+                  Subí el Excel con los empleados que trabajarán en este evento. CREW
+                  validará automáticamente contra todos los documentos corporativos
+                  cargados en la Validación A (ART, AP, CAT, SVO, CNR, Nómina Vigente,
+                  F931).
                 </div>
               </div>
 
               <div className="progress-indicator">
-                <span className="progress-text">
-                  {excelFile ? '1' : '0'}/1 documento
-                </span>
+                <span className="progress-text">{excelFile ? '1' : '0'}/1 documento</span>
                 <div className="progress-bar">
                   <div
                     className="progress-fill"
@@ -618,40 +573,36 @@ export default function ProveedorEventoPage() {
 
               <div className="doc-input-item">
                 <div className="doc-input-header">
-                  <span className="doc-input-label">
-                    Excel Empleados del Evento
-                  </span>
+                  <span className="doc-input-label">Excel Empleados del Evento</span>
                   <span className="doc-input-required">REQUERIDO</span>
                 </div>
                 <div className="modal-section-desc">
-                  Formato: Nombre, Apellido, DNI, CUIL • Solo empleados de este
-                  evento específico
+                  Formato: Nombre, Apellido, DNI, CUIL • Solo empleados de este evento
+                  específico
                 </div>
                 <div className="doc-input-upload">
                   <input
                     accept=".xlsx,.xls"
-                    onChange={(e) => handleExcelUpload(e.target.files)}
+                    onChange={e => handleExcelUpload(e.target.files)}
                     ref={excelInputRef}
                     style={{ display: 'none' }}
                     type="file"
                   />
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      className="doc-input-button"
+                    <Button
                       onClick={() => excelInputRef.current?.click()}
-                      type="button"
+                      size="sm"
+                      variant="gradient"
                     >
                       📊 Seleccionar Excel
-                    </button>
-                    <span
-                      className={`doc-input-filename ${excelFile ? 'uploaded' : ''}`}
-                    >
+                    </Button>
+                    <span className={`doc-input-filename ${excelFile ? 'uploaded' : ''}`}>
                       {excelFile?.name ?? 'Sin archivo'}
                     </span>
                     {excelFile && (
                       <button
                         aria-label="Quitar archivo"
-                        className="doc-input-remove"
+                        className="text-rejected hover:bg-rejected bg-rejected-soft-bg flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-sm transition hover:text-white"
                         onClick={removeExcel}
                         type="button"
                       >
@@ -663,21 +614,21 @@ export default function ProveedorEventoPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <button
-                className="btn btn-cancel"
+              <Button
+                className="flex-1 py-3.5 font-bold"
                 onClick={closeModalB}
-                type="button"
+                variant="ghost"
               >
                 Cancelar
-              </button>
-              <button
-                className="btn btn-primary"
+              </Button>
+              <Button
+                className="flex-1 py-3.5 font-bold"
                 disabled={!canSubmitB}
                 onClick={submitDocsB}
-                type="button"
+                variant="gradient"
               >
                 Enviar Documentos
-              </button>
+              </Button>
             </div>
           </div>
         </div>

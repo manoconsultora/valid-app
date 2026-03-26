@@ -21,7 +21,7 @@ function read(): Provider[] {
   }
 }
 
-export const getProviders = (): Provider[] => read();
+export const getProviders = (): Provider[] => read()
 
 export function addProvider(provider: Omit<Provider, 'id'>): Provider {
   const list = read()

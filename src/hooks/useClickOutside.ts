@@ -1,12 +1,15 @@
 import type { RefObject } from 'react'
 import { useEffect } from 'react'
 
-function isClickOutside(refs: RefObject<HTMLElement | null>[], target: EventTarget | null): boolean {
+function isClickOutside(
+  refs: RefObject<HTMLElement | null>[],
+  target: EventTarget | null
+): boolean {
   const node = target as Node | null
   if (!node) {
     return true
   }
-  return refs.every((ref) => !ref.current || !ref.current.contains(node))
+  return refs.every(ref => !ref.current || !ref.current.contains(node))
 }
 
 export function useClickOutside(

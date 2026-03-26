@@ -12,8 +12,8 @@ export default function UnauthorizedPage() {
           Sin acceso
         </h1>
         <p className="mb-6 text-sm" style={{ color: 'var(--muted)' }}>
-          Tu cuenta está pendiente de activación. Contactá al administrador para
-          que te asigne un rol.
+          Tu cuenta está pendiente de activación. Contactá al administrador para que te
+          asigne un rol.
         </p>
         <Link
           className="inline-block rounded-(--radius) px-4 py-2 text-sm font-medium transition-opacity hover:opacity-90"

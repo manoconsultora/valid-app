@@ -19,48 +19,35 @@ export const MetricCard = ({
   primary,
   secondary,
 }: MetricCardProps) => (
+  <div
+    className="rounded-2xl border p-4"
+    style={{
+      background: 'var(--surface)',
+      borderColor: 'var(--border)',
+      boxShadow: 'var(--shadow)',
+    }}
+  >
     <div
-      className="rounded-2xl border p-4"
-      style={{
-        background: 'var(--surface)',
-        borderColor: 'var(--border)',
-        boxShadow: 'var(--shadow)',
-      }}
+      className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg text-lg"
+      style={{ background: iconBg }}
     >
-      <div
-        className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg text-lg"
-        style={{ background: iconBg }}
-      >
-        {icon}
-      </div>
-      <div
-        className="text-2xl font-bold tracking-tight"
-        style={{ color: 'var(--text)' }}
-      >
-        {primary}
-        {secondary ? (
-          <span
-            className="text-xl"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            {secondary}
-          </span>
-        ) : null}
-      </div>
-      <div
-        className="text-xs font-medium"
-        style={{ color: 'var(--text)' }}
-      >
-        {label}
-      </div>
-      {helper ? (
-        <div
-          className="text-[11px]"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          {helper}
-        </div>
+      {icon}
+    </div>
+    <div className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text)' }}>
+      {primary}
+      {secondary ? (
+        <span className="text-xl" style={{ color: 'var(--text-secondary)' }}>
+          {secondary}
+        </span>
       ) : null}
     </div>
-  );
-
+    <div className="text-xs font-medium" style={{ color: 'var(--text)' }}>
+      {label}
+    </div>
+    {helper ? (
+      <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+        {helper}
+      </div>
+    ) : null}
+  </div>
+)

@@ -79,7 +79,7 @@ Sistema de diseño: Tailwind v4 + variables en `src/app/globals.css`. Usar `text
   - Pendientes (número en naranja).
   - Aprobados (número en verde).
   - Rechazados (número en rojo).
-  Fondo blanco, bordes redondeados, sombra sutil. Reutilizar `MetricCard` si encaja.
+    Fondo blanco, bordes redondeados, sombra sutil. Reutilizar `MetricCard` si encaja.
 - **Acciones principales** (botones grandes, icono + título + subtítulo + flecha):
   - “Ver Protocolo” — fondo azul claro, subtítulo “Requisitos y lineamientos del evento”.
   - “Cargar Trabajadores” — fondo verde claro, subtítulo “Agregar nuevo empleado y documentación”.
@@ -100,7 +100,7 @@ Colores y tipografía: mismos tokens que el resto (--text, --muted, --accent, --
   - Pendientes: fondo lavanda/morado claro, número en morado oscuro.
   - Aprobados: fondo azul claro, número en azul oscuro.
   - Rechazados: fondo rojo/rosa claro, número en rojo.
-  Reutilizar `MetricCard` con los colores indicados.
+    Reutilizar `MetricCard` con los colores indicados.
 - **Filtros:** Píldoras “Todos (17)” (activa: fondo morado, texto blanco), “Pendientes”, “Aprobados” (inactivas: gris claro).
 - **Botones:** “Descargar Reporte” (icono de gráfico/descarga), “Agregar” (icono +). Fondo gris claro, texto gris oscuro, bordes redondeados.
 - **Sección “Trabajadores”:** Título + badge con total (ej. 17). Lista de tarjetas por trabajador:
@@ -124,7 +124,7 @@ Implementar con estructura semántica (section, headings) y clases Tailwind/vari
   - DNI (placeholder ej. “35123456”).
   - CUIL (placeholder ej. “20-35123456-7”).
   - Rol / Función: select “Seleccioná el rol”.
-  Inputs: fondo gris claro, esquinas redondeadas.
+    Inputs: fondo gris claro, esquinas redondeadas.
 - **Sección “Documentación”** (tarjeta blanca):
   - DNI Frente: área de subida con borde punteado, icono documento, “Subir foto DNI frente”, “JPG, PNG • Max 5MB”.
   - DNI Dorso: mismo patrón, “Subir foto DNI dorso”.

@@ -43,77 +43,74 @@ export const EventCard = ({
   subtitle,
   title,
 }: EventCardProps) => (
-    <Link
-      className="block cursor-pointer overflow-hidden transition-all duration-[0.18s] ease-out hover:-translate-y-1 hover:shadow-(--shadow)"
-      href={href}
-      style={cardStyle}
+  <Link
+    className="block cursor-pointer overflow-hidden transition-all duration-[0.18s] ease-out hover:-translate-y-1 hover:shadow-(--shadow)"
+    href={href}
+    style={cardStyle}
+  >
+    <div
+      className="relative w-full overflow-hidden bg-[#1a1a1a]"
+      style={{ height: imageHeight }}
+    >
+      {image}
+      {badgeTopLeft ? (
+        <div className="absolute top-3 left-3 z-1">{badgeTopLeft}</div>
+      ) : null}
+      {badgeTopRight ? (
+        <div className="absolute top-3 right-3 z-1">{badgeTopRight}</div>
+      ) : null}
+      {badgeCenter ? (
+        <div className="absolute top-1/2 left-1/2 z-1 -translate-x-1/2 -translate-y-1/2">
+          {badgeCenter}
+        </div>
+      ) : null}
+      {badgeBottomLeft ? (
+        <div className="absolute bottom-3 left-3 z-1">{badgeBottomLeft}</div>
+      ) : null}
+    </div>
+    <div
+      className="border-t pt-5"
+      style={{
+        borderColor: 'var(--stroke)',
+        paddingBottom: 20,
+        paddingLeft: 20,
+        paddingRight: 20,
+      }}
     >
       <div
-        className="relative w-full overflow-hidden bg-[#1a1a1a]"
-        style={{ height: imageHeight }}
+        className="mb-2 text-[18px] leading-tight font-bold tracking-[-0.02em]"
+        style={{ color: 'var(--text)' }}
       >
-        {image}
-        {badgeTopLeft ? (
-          <div className="absolute left-3 top-3 z-1">{badgeTopLeft}</div>
-        ) : null}
-        {badgeTopRight ? (
-          <div className="absolute right-3 top-3 z-1">{badgeTopRight}</div>
-        ) : null}
-        {badgeCenter ? (
-          <div className="absolute left-1/2 top-1/2 z-1 -translate-x-1/2 -translate-y-1/2">
-            {badgeCenter}
-          </div>
-        ) : null}
-        {badgeBottomLeft ? (
-          <div className="absolute bottom-3 left-3 z-1">{badgeBottomLeft}</div>
-        ) : null}
+        {title}
       </div>
       <div
-        className="border-t pt-5"
-        style={{
-          borderColor: 'var(--stroke)',
-          paddingLeft: 20,
-          paddingRight: 20,
-          paddingBottom: 20,
-        }}
+        className="mb-3.5 flex items-center gap-1.5 text-[13px]"
+        style={{ color: 'var(--muted)' }}
       >
-        <div
-          className="mb-2 text-[18px] font-bold leading-tight tracking-[-0.02em]"
-          style={{ color: 'var(--text)' }}
-        >
-          {title}
-        </div>
-        <div
-          className="mb-3.5 flex items-center gap-1.5 text-[13px]"
-          style={{ color: 'var(--muted)' }}
-        >
-          {subtitle}
-        </div>
-        <div
-          className="flex gap-3 border-t pt-3.5"
-          style={{ borderColor: 'var(--stroke)' }}
-        >
-          {stats.map((stat, i) => (
-            <div className="flex-1 text-center" key={i}>
-              <div
-                className="mb-1 text-[20px] font-bold tracking-[-0.02em]"
-                style={{
-                  color: stat.valueClassName
-                    ? `var(--${stat.valueClassName})`
-                    : 'var(--text)',
-                }}
-              >
-                {stat.value}
-              </div>
-              <div
-                className="text-[10px] font-semibold"
-                style={{ color: 'var(--muted)' }}
-              >
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </div>
+        {subtitle}
       </div>
-    </Link>
-  );
+      <div
+        className="flex gap-3 border-t pt-3.5"
+        style={{ borderColor: 'var(--stroke)' }}
+      >
+        {stats.map((stat, i) => (
+          <div className="flex-1 text-center" key={i}>
+            <div
+              className="mb-1 text-[20px] font-bold tracking-[-0.02em]"
+              style={{
+                color: stat.valueClassName
+                  ? `var(--${stat.valueClassName})`
+                  : 'var(--text)',
+              }}
+            >
+              {stat.value}
+            </div>
+            <div className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>
+              {stat.label}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </Link>
+)

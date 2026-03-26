@@ -3,10 +3,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import type { Database } from '@/types/database.types'
 
-const PUBLIC_PATHS = ['/login', '/unauthorized']
+const PUBLIC_PATHS = ['/login', '/unauthorized', '/auth']
 
 const isPublicPath = (pathname: string): boolean =>
-  PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+  PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(`${p}/`))
 
 async function handleMiddleware(request: NextRequest) {
   const supabaseResponse = NextResponse.next({ request })
@@ -17,7 +17,7 @@ async function handleMiddleware(request: NextRequest) {
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) =>
+        setAll: cookiesToSet =>
           cookiesToSet.forEach(({ name, options, value }) =>
             supabaseResponse.cookies.set(name, value, options)
           ),
@@ -25,7 +25,9 @@ async function handleMiddleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user && !isPublicPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone()

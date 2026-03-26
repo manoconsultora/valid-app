@@ -19,11 +19,10 @@ export async function createServerClient() {
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet: { name: string; value: string; options?: object }[]) => {
-          cookiesToSet.forEach(({ name, value, options }) =>
+        setAll: (cookiesToSet: { name: string; options?: object; value: string }[]) =>
+          cookiesToSet.forEach(({ name, options, value }) =>
             cookieStore.set(name, value, options)
-          )
-        },
+          ),
       },
     }
   )

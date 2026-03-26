@@ -34,7 +34,7 @@ const FormField = ({
       autoComplete={autoComplete}
       className="form-input"
       id={id}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       required
       type={type}
@@ -96,8 +96,7 @@ export default function LoginPage() {
 
   const error = submitError || authError
   const alertMessage = error || successMessage
-  const alertClass =
-    error ? 'alert-error' : successMessage ? 'alert-success' : ''
+  const alertClass = error ? 'alert-error' : successMessage ? 'alert-success' : ''
 
   return (
     <div className="login-page">

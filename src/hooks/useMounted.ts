@@ -8,9 +8,10 @@ export function useMounted(): boolean {
   const [mounted, setMounted] = useState(false)
   useEffect(
     () =>
-      ((t: ReturnType<typeof setTimeout>) => () => clearTimeout(t))(
-        setTimeout(() => setMounted(true), 0)
-      ),
+      (
+        (t: ReturnType<typeof setTimeout>) => () =>
+          clearTimeout(t)
+      )(setTimeout(() => setMounted(true), 0)),
     []
   )
   return mounted

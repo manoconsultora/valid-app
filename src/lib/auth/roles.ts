@@ -6,8 +6,13 @@ import { createServerClient } from '@/lib/supabase/server'
 
 export type AppRole = 'admin' | 'provider'
 
+const isAppRole = (value: unknown): value is AppRole =>
+  value === 'admin' || value === 'provider'
+
 /**
- * Rol desde public.users; nunca desde user_metadata (auth-rbac).
+ * Rol desde app_metadata del JWT (metadata-first, sin query a DB).
+ * Fallback a public.users si app_metadata.role no está asignado aún
+ * (ej: usuario creado antes de aceptar la invitación).
  * Retorna null si no hay usuario o no tiene rol asignado.
  */
 export async function getUserRole(): Promise<AppRole | null> {
@@ -19,20 +24,25 @@ export async function getUserRole(): Promise<AppRole | null> {
     return null
   }
 
+  const metaRole = user.app_metadata?.role
+  if (isAppRole(metaRole)) {
+    return metaRole
+  }
+
   const { data: row } = await supabase
     .from('users')
     .select('role')
     .eq('id', user.id)
     .single()
 
-  const role = (row as { role: AppRole | null } | null)?.role ?? null
-  return role
+  const dbRole = (row as { role: AppRole | null } | null)?.role ?? null
+  return dbRole
 }
 
 /**
  * Exige el rol indicado.
  * - Sin rol → /unauthorized (pendiente de activación).
- * - Rol distinto → redirige a su área (admin → /admin, provider → /proveedor) sin revelar la existencia de la otra.
+ * - Rol distinto → redirige a su área sin revelar la existencia de la otra.
  */
 export async function requireRole(role: AppRole): Promise<void> {
   const currentRole = await getUserRole()

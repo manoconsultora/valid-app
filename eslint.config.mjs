@@ -43,7 +43,10 @@ const baseRules = {
 
 const nextTsRules = {
   '@typescript-eslint/no-shadow': 'error',
-  '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
+  '@typescript-eslint/no-unused-vars': [
+    'error',
+    { argsIgnorePattern: '^_', ignoreRestSiblings: true },
+  ],
   'no-shadow': 'off',
   'import/order': [
     'warn',
