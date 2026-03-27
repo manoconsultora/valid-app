@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Supabase client: inferencia no coincide con Database; cast en .from necesario. */
 import { getUserRole } from '@/lib/auth/roles'
 import { inviteSystem } from '@/lib/invite-system-impl/instance'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createServerClient } from '@/lib/supabase/server'
 import { updateProviderSchema } from '@/lib/validations/provider'
 import type { CreateProviderInput, UpdateProviderInput } from '@/lib/validations/provider'
@@ -147,6 +148,25 @@ export async function updateProvider(
   const { error } = await (supabase as any).from('providers').update(payload).eq('id', id)
   if (error) {
     return { error: error.message }
+  }
+  if (parsed.data.email) {
+    const { data: row } = await (supabase as any)
+      .from('providers')
+      .select('user_id')
+      .eq('id', id)
+      .single()
+    const userId = (row as { user_id: string } | null)?.user_id
+    if (userId) {
+      const admin = createAdminClient()
+      const { error: authErr } = await admin.auth.admin.updateUserById(userId, {
+        email: parsed.data.email,
+      })
+      if (authErr) {
+        return {
+          error: `Proveedor actualizado pero falló la sincronización del email en Auth: ${authErr.message}`,
+        }
+      }
+    }
   }
   return { error: null }
 }
