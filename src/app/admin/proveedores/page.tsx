@@ -309,7 +309,7 @@ export default function ProveedoresPage() {
                     title="Crea un nuevo acceso desde cero para este proveedor. Útil cuando no puede iniciar sesión y las otras opciones no funcionaron."
                     variant="accent-outline"
                   >
-                    {recreatingId === p.id ? 'Recreando…' : 'Restablecer acceso'}
+                    {recreatingId === p.id ? 'Regenerando…' : 'Regenerar acceso'}
                   </Button>
                 </div>
               </div>
