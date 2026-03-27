@@ -38,7 +38,7 @@ async function handleMiddleware(request: NextRequest) {
   return supabaseResponse
 }
 
-export const middleware = handleMiddleware
+export const proxy = handleMiddleware
 
 export const config = {
   matcher: [
