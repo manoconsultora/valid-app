@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
-import { Tooltip } from '@/components/ui/Tooltip'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useProviderCategories } from '@/hooks/useProviderCategories'
 import { useProviders } from '@/hooks/useProviders'
@@ -202,12 +201,10 @@ export default function ProveedoresPage() {
       const { error } = await resetProviderPassword(id)
       setResettingId(null)
       if (error) {
-        setResetMessage(`Error al enviar enlace: ${error}`)
+        setResetMessage(`Error al enviar el enlace: ${error}`)
         return
       }
-      setResetMessage(
-        'Se envió el link para restablecer contraseña al email del proveedor.'
-      )
+      setResetMessage('Enlace para restablecer contraseña enviado.')
       return
     }
     setResetMessage(null)
@@ -218,7 +215,7 @@ export default function ProveedoresPage() {
       setResetMessage(`Error al reenviar invitación: ${error}`)
       return
     }
-    setResetMessage('Se reenvió la invitación al email del proveedor.')
+    setResetMessage('Invitación reenviada al correo del proveedor.')
     await refresh()
   }
 
@@ -231,9 +228,7 @@ export default function ProveedoresPage() {
       setResetMessage(`Error al recrear usuario: ${error}`)
       return
     }
-    setResetMessage(
-      'Usuario recreado. Se envió una nueva invitación al email del proveedor.'
-    )
+    setResetMessage('Acceso recreado. Nueva invitación enviada.')
     await refresh()
   }
 
@@ -333,32 +328,29 @@ export default function ProveedoresPage() {
                   <Button onClick={() => openEditModal(p)} size="sm" variant="ghost">
                     Editar
                   </Button>
-                  <Tooltip content="Envía al proveedor un correo con un link para restablecer su contraseña. Útil si el proveedor olvidó su contraseña o no recibió la invitación original.">
-                    <Button
-                      disabled={resettingId === p.id || recreatingId === p.id}
-                      onClick={() =>
-                        void handleReenviarInvitacion(p.id, p.email, p.hasAcceptedInvite)
-                      }
-                      size="sm"
-                      variant="accent-outline"
-                    >
-                      {resettingId === p.id
-                        ? 'Enviando…'
-                        : p.hasAcceptedInvite
-                          ? 'Enviar link para restablecer contraseña'
-                          : 'Reenviar invitación'}
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="Borrar usuario actual y crear uno nuevo con la misma empresa (útil si el acceso está corrupto)">
-                    <Button
-                      disabled={resettingId === p.id || recreatingId === p.id}
-                      onClick={() => void handleRecrearUsuario(p.id, p.razonSocial)}
-                      size="sm"
-                      variant="accent-outline"
-                    >
-                      {recreatingId === p.id ? 'Recreando…' : 'Regenerar acceso'}
-                    </Button>
-                  </Tooltip>
+                  <Button
+                    disabled={resettingId === p.id || recreatingId === p.id}
+                    onClick={() =>
+                      void handleReenviarInvitacion(p.id, p.email, p.hasAcceptedInvite)
+                    }
+                    size="sm"
+                    variant="accent-outline"
+                  >
+                    {resettingId === p.id
+                      ? 'Enviando…'
+                      : p.hasAcceptedInvite
+                        ? 'Restablecer contraseña'
+                        : 'Reenviar invitación'}
+                  </Button>
+                  <Button
+                    disabled={resettingId === p.id || recreatingId === p.id}
+                    onClick={() => void handleRecrearUsuario(p.id, p.razonSocial)}
+                    size="sm"
+                    title="Crea un nuevo acceso desde cero para este proveedor. Útil cuando no puede iniciar sesión y las otras opciones no funcionaron."
+                    variant="accent-outline"
+                  >
+                    {recreatingId === p.id ? 'Recreando…' : 'Restablecer acceso'}
+                  </Button>
                 </div>
               </div>
             </li>
@@ -502,8 +494,8 @@ export default function ProveedoresPage() {
                     🔐 Acceso del proveedor
                   </p>
                   <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    Al guardar se enviará un correo al email indicado con un link para que
-                    el usuario defina su contraseña. No se envía contraseña por correo.
+                    Al guardar se enviará un correo al email indicado con un enlace para
+                    que el proveedor defina su contraseña.
                   </p>
                 </div>
               )}
