@@ -264,5 +264,11 @@ export async function recreateProviderUser(
   if (!createResult.ok) {
     return { error: createResult.error.message }
   }
+  const newUserId = createResult.data.invitation.supabaseUserId
+  if (newUserId) {
+    const supabase = await createServerClient()
+    /* eslint-disable-next-line camelcase -- snake_case required by DB column name */
+    await (supabase as any).from('providers').update({ user_id: newUserId }).eq('id', id)
+  }
   return { error: null }
 }
