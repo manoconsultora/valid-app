@@ -160,13 +160,15 @@ export async function updateProvider(
       const admin = createAdminClient()
       const { error: authErr } = await admin.auth.admin.updateUserById(userId, {
         email: parsed.data.email,
+        /* eslint-disable-next-line camelcase -- required by Supabase auth admin API */
+        email_confirm: true,
       })
       if (authErr) {
         return {
           error: `Proveedor actualizado pero falló la sincronización del email en Auth: ${authErr.message}`,
         }
       }
-      const { error: userErr } = await supabase
+      const { error: userErr } = await admin
         .from('users')
         .update({ email: parsed.data.email })
         .eq('id', userId)
