@@ -166,6 +166,15 @@ export async function updateProvider(
           error: `Proveedor actualizado pero falló la sincronización del email en Auth: ${authErr.message}`,
         }
       }
+      const { error: userErr } = await supabase
+        .from('users')
+        .update({ email: parsed.data.email })
+        .eq('id', userId)
+      if (userErr) {
+        return {
+          error: `Email actualizado en Auth pero falló en public.users: ${userErr.message}`,
+        }
+      }
     }
   }
   return { error: null }
