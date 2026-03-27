@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 
 import { acceptProviderInvitation } from '@/lib/actions/providers/actions'
 import { supabase } from '@/lib/supabase/client'
@@ -18,7 +18,7 @@ const getPageContent = (isInvite: boolean) => ({
   title: isInvite ? 'Elegí tu contraseña' : 'Restablecé tu contraseña',
 })
 
-export default function EstablecerContrasenaPage() {
+function SetPasswordContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isInviteFlow = searchParams.get('type') === 'invite'
@@ -266,5 +266,13 @@ export default function EstablecerContrasenaPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function SetPasswordPage() {
+  return (
+    <Suspense>
+      <SetPasswordContent />
+    </Suspense>
   )
 }
