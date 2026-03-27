@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useProviderCategories } from '@/hooks/useProviderCategories'
 import { useProviders } from '@/hooks/useProviders'
@@ -12,6 +13,7 @@ import {
   recreateProviderUser,
   resendProviderInvite,
   resetProviderPassword,
+  updateProvider,
 } from '@/lib/actions/providers'
 import type { ProviderCategory, ProviderRowWithStatus } from '@/lib/actions/providers'
 
@@ -22,6 +24,9 @@ const AVATAR_GRADIENTS = [
   'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
   'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
 ]
+
+const getModalTitle = (isEditing: boolean) =>
+  isEditing ? 'Editar Proveedor' : 'Agregar Proveedor'
 
 function getInitials(razonSocial: string): string {
   const first = razonSocial.trim().charAt(0)
@@ -55,6 +60,7 @@ export default function ProveedoresPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [resettingId, setResettingId] = useState<string | null>(null)
   const [recreatingId, setRecreatingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({
     categoryId: '',
     contactName: '',
@@ -87,6 +93,7 @@ export default function ProveedoresPage() {
   )
 
   function openModal(): void {
+    setEditingId(null)
     setShowModal(true)
     setSaveError(null)
     setForm({
@@ -97,6 +104,21 @@ export default function ProveedoresPage() {
       email: '',
       phone: '',
       razonSocial: '',
+    })
+  }
+
+  function openEditModal(p: (typeof displayList)[0]): void {
+    setEditingId(p.id)
+    setShowModal(true)
+    setSaveError(null)
+    setForm({
+      categoryId: p.categoryId,
+      contactName: p.contactName,
+      contactRole: p.contactRole,
+      cuit: p.cuit,
+      email: p.email,
+      phone: p.phone,
+      razonSocial: p.razonSocial,
     })
   }
 
@@ -111,18 +133,31 @@ export default function ProveedoresPage() {
     return err != null ? String(err) : null
   }
 
-  async function handleSaveCore(): Promise<void> {
-    /* eslint-disable camelcase -- API/DB usa snake_case */
-    const result = await createProvider({
-      category_id: form.categoryId,
-      contact_name: form.contactName.trim() || undefined,
-      contact_role: form.contactRole.trim() || undefined,
-      cuit: form.cuit.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim() || undefined,
-      razon_social: form.razonSocial.trim(),
-    })
-    /* eslint-enable camelcase */
+  /* eslint-disable camelcase -- API/DB usa snake_case */
+  const buildFormPayload = () => ({
+    category_id: form.categoryId,
+    contact_name: form.contactName.trim() || undefined,
+    contact_role: form.contactRole.trim() || undefined,
+    cuit: form.cuit.trim(),
+    email: form.email.trim(),
+    phone: form.phone.trim() || undefined,
+    razon_social: form.razonSocial.trim(),
+  })
+  /* eslint-enable camelcase */
+
+  async function handleUpdateCore(id: string): Promise<void> {
+    const result = await updateProvider(id, buildFormPayload())
+    if (result.error) {
+      setSaveError(result.error)
+      return
+    }
+    setShowModal(false)
+    setEditingId(null)
+    refresh()
+  }
+
+  async function handleCreateCore(): Promise<void> {
+    const result = await createProvider(buildFormPayload())
     const errorMessage = extractSaveError(result)
     if (errorMessage) {
       setSaveError(errorMessage)
@@ -143,11 +178,14 @@ export default function ProveedoresPage() {
     setResetMessage(null)
     setSaving(true)
     try {
-      await handleSaveCore()
+      if (editingId) {
+        await handleUpdateCore(editingId)
+      } else {
+        await handleCreateCore()
+      }
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : 'Error inesperado al crear proveedor'
-      setSaveError(typeof msg === 'string' ? msg : 'Error inesperado al crear proveedor')
+      const msg = err instanceof Error ? err.message : 'Error inesperado'
+      setSaveError(typeof msg === 'string' ? msg : 'Error inesperado')
     } finally {
       setSaving(false)
     }
@@ -200,7 +238,7 @@ export default function ProveedoresPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <div className="mx-auto max-w-250">
       <Link
         className="mb-6 inline-block text-[12px] font-medium transition-opacity hover:opacity-70"
         href="/admin"
@@ -292,29 +330,35 @@ export default function ProveedoresPage() {
                   {p.hasAcceptedInvite ? 'Activo' : 'Invitación pendiente'}
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    disabled={resettingId === p.id || recreatingId === p.id}
-                    onClick={() =>
-                      void handleReenviarInvitacion(p.id, p.email, p.hasAcceptedInvite)
-                    }
-                    size="sm"
-                    variant="accent-outline"
-                  >
-                    {resettingId === p.id
-                      ? 'Enviando…'
-                      : p.hasAcceptedInvite
-                        ? 'Enviar link para restablecer contraseña'
-                        : 'Reenviar invitación'}
+                  <Button onClick={() => openEditModal(p)} size="sm" variant="ghost">
+                    Editar
                   </Button>
-                  <Button
-                    disabled={resettingId === p.id || recreatingId === p.id}
-                    onClick={() => void handleRecrearUsuario(p.id, p.razonSocial)}
-                    size="sm"
-                    title="Borrar usuario actual y crear uno nuevo con la misma empresa (útil si el acceso está corrupto)"
-                    variant="accent-outline"
-                  >
-                    {recreatingId === p.id ? 'Recreando…' : 'Recrear usuario'}
-                  </Button>
+                  <Tooltip content="Envía al proveedor un correo con un link para restablecer su contraseña. Útil si el proveedor olvidó su contraseña o no recibió la invitación original.">
+                    <Button
+                      disabled={resettingId === p.id || recreatingId === p.id}
+                      onClick={() =>
+                        void handleReenviarInvitacion(p.id, p.email, p.hasAcceptedInvite)
+                      }
+                      size="sm"
+                      variant="accent-outline"
+                    >
+                      {resettingId === p.id
+                        ? 'Enviando…'
+                        : p.hasAcceptedInvite
+                          ? 'Enviar link para restablecer contraseña'
+                          : 'Reenviar invitación'}
+                    </Button>
+                  </Tooltip>
+                  <Tooltip content="Borrar usuario actual y crear uno nuevo con la misma empresa (útil si el acceso está corrupto)">
+                    <Button
+                      disabled={resettingId === p.id || recreatingId === p.id}
+                      onClick={() => void handleRecrearUsuario(p.id, p.razonSocial)}
+                      size="sm"
+                      variant="accent-outline"
+                    >
+                      {recreatingId === p.id ? 'Recreando…' : 'Regenerar acceso'}
+                    </Button>
+                  </Tooltip>
                 </div>
               </div>
             </li>
@@ -334,7 +378,7 @@ export default function ProveedoresPage() {
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
-                Agregar Proveedor
+                {getModalTitle(!!editingId)}
               </h2>
               <Button onClick={() => setShowModal(false)} variant="icon">
                 ×
@@ -449,19 +493,21 @@ export default function ProveedoresPage() {
                 />
               </div>
 
-              <div
-                className="rounded-lg border p-3"
-                style={{ background: '#f0f9ff', borderColor: '#bfdbfe' }}
-              >
-                <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-                  🔐 Acceso del proveedor
-                </p>
-                <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Al guardar se enviará un correo al email indicado con un link para que
-                  el usuario defina su contraseña. No se envía contraseña por correo.
-                </p>
-              </div>
-              {saveError != null && saveError !== '' && (
+              {!editingId && (
+                <div
+                  className="rounded-lg border p-3"
+                  style={{ background: '#f0f9ff', borderColor: '#bfdbfe' }}
+                >
+                  <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+                    🔐 Acceso del proveedor
+                  </p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    Al guardar se enviará un correo al email indicado con un link para que
+                    el usuario defina su contraseña. No se envía contraseña por correo.
+                  </p>
+                </div>
+              )}
+              {saveError && (
                 <p className="text-sm text-red-600" role="alert">
                   {typeof saveError === 'string' ? saveError : 'Error al guardar'}
                 </p>

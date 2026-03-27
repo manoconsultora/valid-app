@@ -6,6 +6,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { FooterAdmin } from '@/components/FooterAdmin'
 import { NavbarLogo } from '@/components/ui/NavbarLogo'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { useAdminGuard } from '@/hooks/useAdminGuard'
 import { useAuth } from '@/hooks/useAuth'
 import { useClickOutside } from '@/hooks/useClickOutside'
@@ -64,14 +65,14 @@ function AdminHeader({
         </nav>
       </div>
       <div className="flex items-center gap-3">
-        <button
-          className="flex h-10 w-10 items-center justify-center rounded-full border text-lg transition-colors hover:bg-(--bg)"
-          style={{ borderColor: 'var(--border)' }}
-          title="Notificaciones"
-          type="button"
-        >
-          🔔
-        </button>
+        <Tooltip content="Notificaciones" side="bottom">
+          <button
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-(--border) text-lg transition-colors hover:bg-(--bg)"
+            type="button"
+          >
+            🔔
+          </button>
+        </Tooltip>
         <div className="relative">
           <div
             className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full font-semibold text-white transition-opacity hover:opacity-85"
