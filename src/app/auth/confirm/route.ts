@@ -13,7 +13,7 @@ const isInviteOrRecovery = (type: EmailOtpType | null): boolean =>
  * Recibe token_hash y type por query. En invite/recovery cierra antes la sesión
  * actual (p. ej. admin) para que verifyOtp establezca solo la del invitado y no
  * se redirija al dashboard por rol. Valida con verifyOtp, escribe la sesión en
- * cookies y redirige a establecer-contrasena o a next.
+ * cookies y redirige a set-password o a next.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -26,7 +26,9 @@ export async function GET(request: NextRequest) {
   }
 
   const cookieStore = await cookies()
-  const redirectTarget = isInviteOrRecovery(type) ? '/auth/establecer-contrasena' : next
+  const redirectTarget = isInviteOrRecovery(type)
+    ? `/auth/set-password?type=${type}`
+    : next
   const response = NextResponse.redirect(new URL(redirectTarget, request.url))
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!

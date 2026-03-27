@@ -2,17 +2,27 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 import { acceptProviderInvitation } from '@/lib/actions/providers/actions'
 import { supabase } from '@/lib/supabase/client'
-import './establecer-contrasena.css'
+import './set-password.css'
 
 type Status = 'invalid_link' | 'loading' | 'ready'
 
+const getPageContent = (isInvite: boolean) => ({
+  subtitle: isInvite
+    ? 'Ingresá una contraseña segura para acceder a tu cuenta. Usá al menos 6 caracteres.'
+    : 'Ingresá tu nueva contraseña. Debe tener al menos 6 caracteres.',
+  title: isInvite ? 'Elegí tu contraseña' : 'Restablecé tu contraseña',
+})
+
 export default function EstablecerContrasenaPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isInviteFlow = searchParams.get('type') === 'invite'
+  const { subtitle, title } = getPageContent(isInviteFlow)
   const [status, setStatus] = useState<Status>('loading')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -61,7 +71,7 @@ export default function EstablecerContrasenaPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (user?.id) {
+    if (user?.id && isInviteFlow) {
       await acceptProviderInvitation(user.id)
     }
     await supabase.auth.refreshSession()
@@ -201,11 +211,8 @@ export default function EstablecerContrasenaPage() {
           </div>
         </div>
 
-        <p className="set-password-title">Elegí tu contraseña</p>
-        <p className="set-password-subtitle">
-          Ingresá una contraseña segura para acceder a tu cuenta. Usá al menos 6
-          caracteres.
-        </p>
+        <p className="set-password-title">{title}</p>
+        <p className="set-password-subtitle">{subtitle}</p>
 
         <div
           className={['alert', alertClass, alertMessage ? 'alert-visible' : ''].join(' ')}
