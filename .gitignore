@@ -45,3 +45,4 @@ next-env.d.ts
 
 #folders
 .claude/.mcp.json
+.mcp.json
