@@ -102,16 +102,24 @@ export interface DbEmployee {
   company_id: string
   position: string
   email: string
-  phone: string
+  phone: string | null
   status: 'Activo' | 'Inactivo'
+  /** null when employee has no dashboard access */
+  user_id: string | null
   created_at: string
   updated_at: string
 }
 
-/** companies (opcional, para RRHH) */
+/** companies (RRHH — internal group companies, no user access) */
 export interface DbCompany {
   id: string
   name: string
+  cuit: string
+  category_id: string
+  email: string
+  phone: string | null
+  contact_name: string | null
+  contact_role: string | null
   created_at: string
   updated_at: string
 }

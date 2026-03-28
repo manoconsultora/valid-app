@@ -13,6 +13,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
     phone: '+54 9 11 1234-5678',
     position: 'Productora General',
     status: 'Activo',
+    userId: null,
   },
   {
     companyId: 'popart',
@@ -23,6 +24,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
     phone: '+54 9 11 1234-5678',
     position: 'Director Técnico',
     status: 'Activo',
+    userId: null,
   },
   {
     companyId: 'popart',
@@ -33,6 +35,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
     phone: '+54 9 11 1234-5678',
     position: 'Coordinadora de Producción',
     status: 'Activo',
+    userId: null,
   },
   {
     companyId: 'segumax',
@@ -43,6 +46,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
     phone: '+54 9 11 1234-5678',
     position: 'Jefe de Seguridad',
     status: 'Activo',
+    userId: null,
   },
   {
     companyId: 'eventpro',
@@ -53,6 +57,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
     phone: '+54 9 11 1234-5678',
     position: 'Asistente de Producción',
     status: 'Activo',
+    userId: null,
   },
   {
     companyId: 'logistica',
@@ -63,6 +68,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
     phone: '+54 9 11 1234-5678',
     position: 'Encargado Logística',
     status: 'Inactivo',
+    userId: null,
   },
 ]
 

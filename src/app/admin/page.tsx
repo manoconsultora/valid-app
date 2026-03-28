@@ -18,7 +18,7 @@ import type { Event } from '@/types'
 export default function AdminDashboardPage() {
   const [events, setEvents] = useState<Event[]>([])
   const venueById = Object.fromEntries(VENUES.map(v => [v.id, v]))
-  const { user } = useUser()
+  const { loading: userLoading, user } = useUser()
   const userName = user?.name ?? ''
 
   useDocumentTitle('Panel de Control - VALID')
@@ -42,7 +42,7 @@ export default function AdminDashboardPage() {
     <div className="mx-auto max-w-[1400px]">
       <PageHeader
         subtitle="Bienvenida al panel de control"
-        title={`Hola, ${userName || 'Admin'} 👋`}
+        title={userLoading ? 'Hola 👋' : `Hola, ${userName || 'Admin'} 👋`}
       />
 
       {/* Stats */}
