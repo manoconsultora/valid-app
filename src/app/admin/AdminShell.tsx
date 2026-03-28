@@ -6,6 +6,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { FooterAdmin } from '@/components/FooterAdmin'
 import { NavbarLogo } from '@/components/ui/NavbarLogo'
+import { ToastContainer, ToastProvider } from '@/components/ui/Toast'
 import { useAdminGuard } from '@/hooks/useAdminGuard'
 import { useAuth } from '@/hooks/useAuth'
 import { useClickOutside } from '@/hooks/useClickOutside'
@@ -146,10 +147,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
-      <AdminHeader onLogout={handleLogout} userEmail={userEmail} userName={userName} />
-      <main className="mx-auto px-6 py-6">{children}</main>
-      <FooterAdmin />
-    </div>
+    <ToastProvider>
+      <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+        <AdminHeader onLogout={handleLogout} userEmail={userEmail} userName={userName} />
+        <main className="mx-auto px-6 py-6">{children}</main>
+        <FooterAdmin />
+        <ToastContainer />
+      </div>
+    </ToastProvider>
   )
 }

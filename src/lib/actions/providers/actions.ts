@@ -22,6 +22,7 @@ import {
   buildProviderUpdatePayload,
   getInviteBaseUrl,
   parseZodFieldError,
+  parseZodFieldErrors,
   toErrorString,
 } from './utils'
 
@@ -103,40 +104,44 @@ export async function listProvidersWithStatus(): Promise<{
   return { data: withStatus, error: null }
 }
 
-export async function createProvider(
-  input: CreateProviderInput
-): Promise<{ data: { providerId: string } | null; error: string | null }> {
-  const out = (data: { providerId: string } | null, error: string | null) =>
-    ({ data, error }) as const
+export async function createProvider(input: CreateProviderInput): Promise<{
+  data: { providerId: string } | null
+  error: string | null
+  fieldErrors?: Record<string, string>
+}> {
   try {
     const prep = await prepareCreateProviderContext(input)
     if (prep.error || !prep.context) {
-      return out(null, toErrorString(prep.error ?? 'Error de configuración'))
+      return {
+        data: null,
+        error: toErrorString(prep.error ?? 'Error de configuración'),
+        fieldErrors: prep.fieldErrors,
+      }
     }
     const result = await performCreateProviderSteps(prep.context)
     if (result.error) {
-      return out(null, toErrorString(result.error))
+      return { data: null, error: toErrorString(result.error) }
     }
     const { providerId } = result
     if (!providerId || typeof providerId !== 'string') {
-      return out(null, 'No se devolvió el id del proveedor')
+      return { data: null, error: 'No se devolvió el id del proveedor' }
     }
-    return out({ providerId }, null)
+    return { data: { providerId }, error: null }
   } catch (e) {
-    return out(
-      null,
-      e instanceof Error ? e.message : 'Error inesperado al crear proveedor'
-    )
+    return {
+      data: null,
+      error: e instanceof Error ? e.message : 'Error inesperado al crear proveedor',
+    }
   }
 }
 
 export async function updateProvider(
   id: string,
   input: UpdateProviderInput
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; fieldErrors?: Record<string, string> }> {
   const parsed = updateProviderSchema.safeParse(input)
   if (!parsed.success) {
-    return { error: parseZodFieldError(parsed) }
+    return { error: parseZodFieldError(parsed), fieldErrors: parseZodFieldErrors(parsed) }
   }
   const role = await getUserRole()
   const authResult = await ensureCanEditProvider(id, role)

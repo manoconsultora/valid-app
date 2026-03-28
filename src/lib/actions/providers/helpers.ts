@@ -10,6 +10,7 @@ import {
   buildProviderInsertPayload,
   getInviteBaseUrl,
   parseZodFieldError,
+  parseZodFieldErrors,
   toErrorString,
 } from './utils'
 
@@ -95,16 +96,22 @@ export async function requireAdmin(
   }
 }
 
-export async function prepareCreateProviderContext(
-  input: CreateProviderInput
-): Promise<{ context: CreateProviderContext | null; error: string | null }> {
+export async function prepareCreateProviderContext(input: CreateProviderInput): Promise<{
+  context: CreateProviderContext | null
+  error: string | null
+  fieldErrors?: Record<string, string>
+}> {
   const adminErr = await requireAdmin('Solo administradores pueden crear proveedores')
   if (adminErr.error) {
     return { context: null, error: adminErr.error }
   }
   const parsed = createProviderSchema.safeParse(input)
   if (!parsed.success) {
-    return { context: null, error: parseZodFieldError(parsed) }
+    return {
+      context: null,
+      error: parseZodFieldError(parsed),
+      fieldErrors: parseZodFieldErrors(parsed),
+    }
   }
   const baseUrl = getInviteBaseUrl()
   if (!baseUrl) {

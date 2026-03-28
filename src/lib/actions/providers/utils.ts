@@ -8,6 +8,16 @@ export const parseZodFieldError = (parsed: {
 }): string =>
   Object.values(parsed.error.flatten().fieldErrors).flat().join('. ') || 'Datos inválidos'
 
+export const parseZodFieldErrors = (parsed: {
+  success: false
+  error: { flatten: () => { fieldErrors: Record<string, string[]> } }
+}): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(parsed.error.flatten().fieldErrors)
+      .filter(([, v]) => v.length > 0)
+      .map(([k, v]) => [k, v[0]])
+  )
+
 export const getInviteBaseUrl = (): string | null =>
   (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? '') || null
 
