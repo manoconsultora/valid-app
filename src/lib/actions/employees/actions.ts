@@ -2,12 +2,16 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- Supabase client: inferencia no coincide con Database; cast en .from necesario. */
 import { requireAdmin } from '../providers/helpers'
-import { getInviteBaseUrl, parseZodFieldError } from '../providers/utils'
+import {
+  getInviteBaseUrl,
+  parseZodFieldError,
+  parseZodFieldErrors,
+} from '../providers/utils'
 import { inviteSystem } from '@/lib/invite-system-impl/instance'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createServerClient } from '@/lib/supabase/server'
-import { createEmployeeSchema } from '@/lib/validations/employee'
-import type { CreateEmployeeInput } from '@/lib/validations/employee'
+import { createEmployeeSchema, updateEmployeeSchema } from '@/lib/validations/employee'
+import type { CreateEmployeeInput, UpdateEmployeeInput } from '@/lib/validations/employee'
 
 import type { EmployeeRow, EmployeeRowWithStatus } from './types'
 
@@ -52,16 +56,22 @@ export async function listEmployeesWithStatus(): Promise<{
   }
 }
 
-export async function createEmployee(
-  input: CreateEmployeeInput
-): Promise<{ data: { employeeId: string } | null; error: string | null }> {
+export async function createEmployee(input: CreateEmployeeInput): Promise<{
+  data: { employeeId: string } | null
+  error: string | null
+  fieldErrors?: Record<string, string>
+}> {
   const adminErr = await requireAdmin('Solo administradores pueden crear empleados')
   if (adminErr.error) {
     return { data: null, error: adminErr.error }
   }
   const parsed = createEmployeeSchema.safeParse(input)
   if (!parsed.success) {
-    return { data: null, error: parseZodFieldError(parsed) }
+    return {
+      data: null,
+      error: parseZodFieldError(parsed),
+      fieldErrors: parseZodFieldErrors(parsed),
+    }
   }
   const employeeId = crypto.randomUUID()
   let userId: string | null = null
@@ -216,4 +226,66 @@ export async function recreateEmployeeUser(
     await (supabase as any).from('employees').update({ user_id: newUserId }).eq('id', id)
   }
   return { error: null }
+}
+
+export async function updateEmployee(
+  id: string,
+  input: UpdateEmployeeInput
+): Promise<{
+  data: { employeeId: string } | null
+  error: string | null
+  fieldErrors?: Record<string, string>
+}> {
+  const adminErr = await requireAdmin('Solo administradores pueden editar empleados')
+  if (adminErr.error) {
+    return { data: null, error: adminErr.error }
+  }
+  const parsed = updateEmployeeSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      data: null,
+      error: parseZodFieldError(parsed),
+      fieldErrors: parseZodFieldErrors(parsed),
+    }
+  }
+  try {
+    const supabase = await createServerClient()
+    /* eslint-disable camelcase -- DB update uses snake_case column names */
+    const payload: Record<string, unknown> = {}
+    if (parsed.data.company_id !== undefined) {
+      payload.company_id = parsed.data.company_id
+    }
+    if (parsed.data.cuil !== undefined) {
+      payload.cuil = parsed.data.cuil
+    }
+    if (parsed.data.email !== undefined) {
+      payload.email = parsed.data.email
+    }
+    if (parsed.data.name !== undefined) {
+      payload.name = parsed.data.name
+    }
+    if (parsed.data.phone !== undefined) {
+      payload.phone = parsed.data.phone || null
+    }
+    if (parsed.data.position !== undefined) {
+      payload.position = parsed.data.position
+    }
+    if (parsed.data.status !== undefined) {
+      payload.status = parsed.data.status
+    }
+    /* eslint-enable camelcase */
+    const { error } = await (supabase as any)
+      .from('employees')
+      .update(payload)
+      .eq('id', id)
+    if (error) {
+      return { data: null, error: error.message }
+    }
+    return { data: { employeeId: id }, error: null }
+  } catch (e) {
+    return {
+      data: null,
+      error: e instanceof Error ? e.message : 'Error al actualizar empleado',
+    }
+  }
 }

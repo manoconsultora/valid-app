@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useProviderCategories } from '@/hooks/useProviderCategories'
 import { useProviders } from '@/hooks/useProviders'
+import { useToast } from '@/hooks/useToast'
 import {
   createProvider,
   recreateProviderUser,
@@ -49,17 +50,25 @@ function rowToDisplay(p: ProviderRowWithStatus, categories: ProviderCategory[]) 
   }
 }
 
+const FieldError = ({ message }: { message?: string }) =>
+  message ? (
+    <p className="mt-1 text-xs text-red-600" role="alert">
+      {message}
+    </p>
+  ) : null
+
 export default function ProveedoresPage() {
   const { categories } = useProviderCategories()
   const { data: list, error: listError, loading: listLoading, refresh } = useProviders()
-  const [resetMessage, setResetMessage] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const { show: showToast } = useToast()
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [resettingId, setResettingId] = useState<string | null>(null)
   const [recreatingId, setRecreatingId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const [form, setForm] = useState({
     categoryId: '',
     contactName: '',
@@ -91,10 +100,16 @@ export default function ProveedoresPage() {
     [displayList, q, search]
   )
 
+  function closeModal(): void {
+    setEditingId(null)
+    setShowModal(false)
+  }
+
   function openModal(): void {
     setEditingId(null)
     setShowModal(true)
     setSaveError(null)
+    setFieldErrors({})
     setForm({
       categoryId: '',
       contactName: '',
@@ -110,6 +125,7 @@ export default function ProveedoresPage() {
     setEditingId(p.id)
     setShowModal(true)
     setSaveError(null)
+    setFieldErrors({})
     setForm({
       categoryId: p.categoryId,
       contactName: p.contactName,
@@ -119,17 +135,6 @@ export default function ProveedoresPage() {
       phone: p.phone,
       razonSocial: p.razonSocial,
     })
-  }
-
-  function extractSaveError(result: unknown): string | null {
-    if (!result || typeof result !== 'object' || !('error' in result)) {
-      return null
-    }
-    const { error: err } = result as { error: unknown }
-    if (typeof err === 'string') {
-      return err
-    }
-    return err != null ? String(err) : null
   }
 
   /* eslint-disable camelcase -- API/DB usa snake_case */
@@ -147,34 +152,38 @@ export default function ProveedoresPage() {
   async function handleUpdateCore(id: string): Promise<void> {
     const result = await updateProvider(id, buildFormPayload())
     if (result.error) {
+      if (result.fieldErrors) {
+        setFieldErrors(result.fieldErrors)
+      }
       setSaveError(result.error)
       return
     }
-    setShowModal(false)
-    setEditingId(null)
+    closeModal()
     refresh()
+    showToast('Proveedor actualizado correctamente', 'success')
   }
 
   async function handleCreateCore(): Promise<void> {
     const result = await createProvider(buildFormPayload())
-    const errorMessage = extractSaveError(result)
-    if (errorMessage) {
-      setSaveError(errorMessage)
-      return
-    }
-    if (!result || typeof result !== 'object' || !result.data?.providerId) {
+    if (result.error) {
+      if (result.fieldErrors) {
+        setFieldErrors(result.fieldErrors)
+      }
       setSaveError(
-        'No se recibió respuesta del servidor. Comprueba NEXT_PUBLIC_APP_URL y SUPABASE_SERVICE_ROLE_KEY en .env.local.'
+        result.error === 'Error de configuración'
+          ? 'No se recibió respuesta del servidor. Comprueba NEXT_PUBLIC_APP_URL y SUPABASE_SERVICE_ROLE_KEY en .env.local.'
+          : result.error
       )
       return
     }
-    setShowModal(false)
+    closeModal()
     refresh()
+    showToast('Proveedor creado. Se envió la invitación por email.', 'success')
   }
 
   async function handleSave(): Promise<void> {
     setSaveError(null)
-    setResetMessage(null)
+    setFieldErrors({})
     setSaving(true)
     try {
       if (editingId) {
@@ -196,39 +205,36 @@ export default function ProveedoresPage() {
     hasAcceptedInvite: boolean
   ): Promise<void> {
     if (hasAcceptedInvite) {
-      setResetMessage(null)
       setResettingId(id)
       const { error } = await resetProviderPassword(id)
       setResettingId(null)
       if (error) {
-        setResetMessage(`Error al enviar el enlace: ${error}`)
+        showToast(`Error al enviar el enlace: ${error}`, 'error')
         return
       }
-      setResetMessage('Enlace para restablecer contraseña enviado.')
+      showToast('Enlace para restablecer contraseña enviado.', 'success')
       return
     }
-    setResetMessage(null)
     setResettingId(id)
     const { error } = await resendProviderInvite(id)
     setResettingId(null)
     if (error) {
-      setResetMessage(`Error al reenviar invitación: ${error}`)
+      showToast(`Error al reenviar invitación: ${error}`, 'error')
       return
     }
-    setResetMessage('Invitación reenviada al correo del proveedor.')
+    showToast('Invitación reenviada al correo del proveedor.', 'success')
     await refresh()
   }
 
   async function handleRecrearUsuario(id: string, _razonSocial: string): Promise<void> {
-    setResetMessage(null)
     setRecreatingId(id)
     const { error } = await recreateProviderUser(id)
     setRecreatingId(null)
     if (error) {
-      setResetMessage(`Error al recrear usuario: ${error}`)
+      showToast(`Error al recrear usuario: ${error}`, 'error')
       return
     }
-    setResetMessage('Acceso recreado. Nueva invitación enviada.')
+    showToast('Acceso recreado. Nueva invitación enviada.', 'success')
     await refresh()
   }
 
@@ -262,18 +268,6 @@ export default function ProveedoresPage() {
         />
       </div>
 
-      {resetMessage && (
-        <p
-          className="mb-4 text-sm"
-          role="status"
-          style={{
-            color: resetMessage.startsWith('Error') ? '#dc2626' : 'var(--accent)',
-          }}
-        >
-          {resetMessage}
-        </p>
-      )}
-
       {listError && (
         <p className="mb-4 text-sm text-red-600" role="alert">
           {listError}
@@ -293,6 +287,16 @@ export default function ProveedoresPage() {
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         <ul className="divide-y" style={{ borderColor: 'var(--border)' }}>
+          {!listLoading && filtered.length === 0 && (
+            <li
+              className="px-4 py-8 text-center text-sm"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {search.trim()
+                ? 'Sin resultados para la búsqueda.'
+                : 'No hay proveedores registrados.'}
+            </li>
+          )}
           {filtered.map((p, i) => (
             <li className="flex items-center gap-4 px-4 py-4" key={p.id}>
               <div
@@ -361,7 +365,7 @@ export default function ProveedoresPage() {
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
-          onClick={() => setShowModal(false)}
+          onClick={closeModal}
           role="dialog"
         >
           <div
@@ -372,7 +376,7 @@ export default function ProveedoresPage() {
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
                 {getModalTitle(!!editingId)}
               </h2>
-              <Button onClick={() => setShowModal(false)} variant="icon">
+              <Button onClick={closeModal} variant="icon">
                 ×
               </Button>
             </div>
@@ -391,6 +395,7 @@ export default function ProveedoresPage() {
                   placeholder="Ej: SULLAIR ARGENTINA SA"
                   value={form.razonSocial}
                 />
+                <FieldError message={fieldErrors?.razon_social} />
               </div>
               <div>
                 <label
@@ -405,6 +410,7 @@ export default function ProveedoresPage() {
                   placeholder="30-12345678-9"
                   value={form.cuit}
                 />
+                <FieldError message={fieldErrors?.cuit} />
               </div>
               <div>
                 <label
@@ -425,6 +431,7 @@ export default function ProveedoresPage() {
                     </option>
                   ))}
                 </select>
+                <FieldError message={fieldErrors?.category_id} />
               </div>
               <div>
                 <label
@@ -440,6 +447,7 @@ export default function ProveedoresPage() {
                   type="email"
                   value={form.email}
                 />
+                <FieldError message={fieldErrors?.email} />
               </div>
               <div>
                 <label
@@ -510,7 +518,7 @@ export default function ProveedoresPage() {
               <Button disabled={saving} onClick={handleSave}>
                 {saving ? 'Guardando...' : 'Guardar'}
               </Button>
-              <Button onClick={() => setShowModal(false)} variant="ghost">
+              <Button onClick={closeModal} variant="ghost">
                 Cancelar
               </Button>
             </div>

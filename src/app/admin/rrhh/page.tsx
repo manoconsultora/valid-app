@@ -9,6 +9,7 @@ import { useCompanies } from '@/hooks/useCompanies'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useEmployees } from '@/hooks/useEmployees'
 import { useProviderCategories } from '@/hooks/useProviderCategories'
+import { useToast } from '@/hooks/useToast'
 import { createCompany } from '@/lib/actions/companies'
 import type { CompanyRow } from '@/lib/actions/companies'
 import {
@@ -16,6 +17,7 @@ import {
   recreateEmployeeUser,
   resendEmployeeInvite,
   resetEmployeePassword,
+  updateEmployee,
 } from '@/lib/actions/employees'
 import type { EmployeeRowWithStatus } from '@/lib/actions/employees'
 import type { ProviderCategory } from '@/lib/actions/providers'
@@ -62,6 +64,17 @@ const getInitials = (name: string): string =>
     .slice(0, 2)
 
 // ---------------------------------------------------------------------------
+// FieldError
+// ---------------------------------------------------------------------------
+
+const FieldError = ({ message }: { message?: string }) =>
+  message ? (
+    <p className="mt-1 text-xs text-red-600" role="alert">
+      {message}
+    </p>
+  ) : null
+
+// ---------------------------------------------------------------------------
 // EmployeeAuthBadge
 // ---------------------------------------------------------------------------
 
@@ -85,17 +98,9 @@ function EmployeeAuthBadge({
   const hasAcceptedInvite = emp.last_sign_in_at != null
   return (
     <>
-      <span
-        className="rounded px-2 py-0.5 text-xs font-medium"
-        style={{
-          background: hasAcceptedInvite
-            ? 'rgba(34, 197, 94, 0.15)'
-            : 'rgba(234, 179, 8, 0.2)',
-          color: hasAcceptedInvite ? '#15803d' : '#a16207',
-        }}
-      >
-        {hasAcceptedInvite ? 'Activo' : 'Invitación pendiente'}
-      </span>
+      <Badge variant={hasAcceptedInvite ? 'successSoft' : 'errorSoft'}>
+          {hasAcceptedInvite ? 'Activo' : 'Invitación pendiente'}
+      </Badge>
       <div className="flex flex-wrap items-center gap-2">
         <Button
           disabled={isBusy}
@@ -131,6 +136,7 @@ type EmployeeRowProps = {
   companies: CompanyRow[]
   emp: EmployeeRowWithStatus
   index: number
+  onEdit: (_emp: EmployeeRowWithStatus) => void
   onRecreate: (_emp: EmployeeRowWithStatus) => void
   onResend: (_emp: EmployeeRowWithStatus) => void
   recreatingId: string | null
@@ -141,6 +147,7 @@ function EmployeeRow({
   companies,
   emp,
   index,
+  onEdit,
   onRecreate,
   onResend,
   recreatingId,
@@ -167,9 +174,9 @@ function EmployeeRow({
         </p>
       </div>
       <div className="flex flex-col items-end gap-2 text-right text-sm">
-        <Badge variant={emp.status === 'Activo' ? 'successSoft' : 'errorSoft'}>
-          {emp.status}
-        </Badge>
+        <Button onClick={() => onEdit(emp)} size="sm" variant="ghost">
+          Editar
+        </Button>
         {emp.user_id != null && (
           <EmployeeAuthBadge
             emp={emp}
@@ -317,7 +324,9 @@ const CompanyForm = ({
 type EmployeeFormProps = {
   companies: CompanyRow[]
   error: string | null
+  fieldErrors?: Record<string, string>
   form: EmployeeFormState
+  isEditing?: boolean
   onCancel: () => void
   onChange: (_patch: Partial<EmployeeFormState>) => void
   onCompanySelect: (_value: string) => void
@@ -328,7 +337,9 @@ type EmployeeFormProps = {
 const EmployeeForm = ({
   companies,
   error,
+  fieldErrors,
   form,
+  isEditing,
   onCancel,
   onChange,
   onCompanySelect,
@@ -346,6 +357,7 @@ const EmployeeForm = ({
         placeholder="Ej: Juan Pérez"
         value={form.name}
       />
+      <FieldError message={fieldErrors?.name} />
     </div>
     <div>
       <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>
@@ -357,6 +369,7 @@ const EmployeeForm = ({
         placeholder="20-12345678-9"
         value={form.cuil}
       />
+      <FieldError message={fieldErrors?.cuil} />
     </div>
     <div>
       <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>
@@ -373,8 +386,9 @@ const EmployeeForm = ({
             {c.name}
           </option>
         ))}
-        <option value="__new__">+ Agregar empresa...</option>
+        {!isEditing && <option value="__new__">+ Agregar empresa...</option>}
       </select>
+      <FieldError message={fieldErrors?.company_id} />
     </div>
     <div>
       <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>
@@ -386,6 +400,7 @@ const EmployeeForm = ({
         placeholder="Ej: Coordinador de Producción"
         value={form.position}
       />
+      <FieldError message={fieldErrors?.position} />
     </div>
     <div>
       <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>
@@ -398,6 +413,7 @@ const EmployeeForm = ({
         type="email"
         value={form.email}
       />
+      <FieldError message={fieldErrors?.email} />
     </div>
     <div>
       <label className="block text-sm font-medium" style={{ color: 'var(--text)' }}>
@@ -424,22 +440,24 @@ const EmployeeForm = ({
         <option value="Inactivo">Inactivo</option>
       </select>
     </div>
-    <div className="flex items-start gap-2">
-      <input
-        checked={form.hasDashboardAccess}
-        className="mt-0.5 h-4 w-4 cursor-pointer"
-        id="hasDashboardAccess"
-        onChange={e => onChange({ hasDashboardAccess: e.target.checked })}
-        type="checkbox"
-      />
-      <label
-        className="cursor-pointer text-sm"
-        htmlFor="hasDashboardAccess"
-        style={{ color: 'var(--text)' }}
-      >
-        Dar acceso al dashboard de administrador
-      </label>
-    </div>
+    {!isEditing && (
+      <div className="flex items-start gap-2">
+        <input
+          checked={form.hasDashboardAccess}
+          className="mt-0.5 h-4 w-4 cursor-pointer"
+          id="hasDashboardAccess"
+          onChange={e => onChange({ hasDashboardAccess: e.target.checked })}
+          type="checkbox"
+        />
+        <label
+          className="cursor-pointer text-sm"
+          htmlFor="hasDashboardAccess"
+          style={{ color: 'var(--text)' }}
+        >
+          Dar acceso al dashboard de administrador
+        </label>
+      </div>
+    )}
     {error && (
       <p className="text-sm text-red-600" role="alert">
         {error}
@@ -464,13 +482,15 @@ export default function RRHHPage() {
   const { data: list, error: listError, loading, refresh } = useEmployees()
   const { data: companies, refresh: companiesRefresh } = useCompanies()
   const { categories } = useProviderCategories()
+  const { show: showToast } = useToast()
 
   const [companyError, setCompanyError] = useState<string | null>(null)
   const [companyForm, setCompanyForm] = useState(EMPTY_COMPANY_FORM)
   const [creatingCompany, setCreatingCompany] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [employeeForm, setEmployeeForm] = useState(EMPTY_EMPLOYEE_FORM)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [recreatingId, setRecreatingId] = useState<string | null>(null)
-  const [resetMessage, setResetMessage] = useState<string | null>(null)
   const [resettingId, setResettingId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -500,10 +520,36 @@ export default function RRHHPage() {
     [companies, list, q, search]
   )
 
+  function closeModal(): void {
+    setEditingId(null)
+    setShowModal(false)
+  }
+
   function openModal(): void {
     setCompanyError(null)
     setCompanyForm(EMPTY_COMPANY_FORM)
+    setEditingId(null)
     setEmployeeForm(EMPTY_EMPLOYEE_FORM)
+    setFieldErrors({})
+    setSaveError(null)
+    setShowCompanyForm(false)
+    setShowModal(true)
+  }
+
+  function openEditModal(emp: EmployeeRowWithStatus): void {
+    setCompanyError(null)
+    setEditingId(emp.id)
+    setEmployeeForm({
+      companyId: emp.company_id,
+      cuil: emp.cuil,
+      email: emp.email,
+      hasDashboardAccess: false,
+      name: emp.name,
+      phone: emp.phone ?? '',
+      position: emp.position,
+      status: emp.status,
+    })
+    setFieldErrors({})
     setSaveError(null)
     setShowCompanyForm(false)
     setShowModal(true)
@@ -561,27 +607,53 @@ export default function RRHHPage() {
   }
 
   async function handleSave(): Promise<void> {
+    setFieldErrors({})
     setSaveError(null)
-    setResetMessage(null)
     setSaving(true)
     try {
-      const result = await createEmployee({
-        company_id: employeeForm.companyId,
-        cuil: employeeForm.cuil.trim(),
-        email: employeeForm.email.trim(),
-        has_dashboard_access: employeeForm.hasDashboardAccess,
-        name: employeeForm.name.trim(),
-        phone: employeeForm.phone.trim() || undefined,
-        position: employeeForm.position.trim(),
-        status: employeeForm.status,
-      })
-      /* eslint-enable camelcase */
-      if (result.error) {
-        setSaveError(result.error)
-        return
+      if (editingId) {
+        const result = await updateEmployee(editingId, {
+          company_id: employeeForm.companyId,
+          cuil: employeeForm.cuil.trim(),
+          email: employeeForm.email.trim(),
+          name: employeeForm.name.trim(),
+          phone: employeeForm.phone.trim() || undefined,
+          position: employeeForm.position.trim(),
+          status: employeeForm.status,
+        })
+        if (result.error) {
+          if (result.fieldErrors) {
+            setFieldErrors(result.fieldErrors)
+          }
+          setSaveError(result.error)
+          return
+        }
+        closeModal()
+        refresh()
+        showToast('Empleado actualizado correctamente', 'success')
+      } else {
+        const result = await createEmployee({
+          company_id: employeeForm.companyId,
+          cuil: employeeForm.cuil.trim(),
+          email: employeeForm.email.trim(),
+          has_dashboard_access: employeeForm.hasDashboardAccess,
+          name: employeeForm.name.trim(),
+          phone: employeeForm.phone.trim() || undefined,
+          position: employeeForm.position.trim(),
+          status: employeeForm.status,
+        })
+        /* eslint-enable camelcase */
+        if (result.error) {
+          if (result.fieldErrors) {
+            setFieldErrors(result.fieldErrors)
+          }
+          setSaveError(result.error)
+          return
+        }
+        closeModal()
+        refresh()
+        showToast('Empleado creado correctamente', 'success')
       }
-      setShowModal(false)
-      refresh()
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Error inesperado')
     } finally {
@@ -590,24 +662,23 @@ export default function RRHHPage() {
   }
 
   async function handleResendInvite(emp: EmployeeRowWithStatus): Promise<void> {
-    setResetMessage(null)
     setResettingId(emp.id)
     try {
       if (emp.last_sign_in_at != null) {
         const { error } = await resetEmployeePassword(emp.id)
         if (error) {
-          setResetMessage(`Error al enviar el enlace: ${error}`)
+          showToast(`Error al enviar el enlace: ${error}`, 'error')
           return
         }
-        setResetMessage('Enlace para restablecer contraseña enviado.')
+        showToast('Enlace para restablecer contraseña enviado.', 'success')
         return
       }
       const { error } = await resendEmployeeInvite(emp.id)
       if (error) {
-        setResetMessage(`Error al reenviar invitación: ${error}`)
+        showToast(`Error al reenviar invitación: ${error}`, 'error')
         return
       }
-      setResetMessage('Invitación reenviada al correo del empleado.')
+      showToast('Invitación reenviada al correo del empleado.', 'success')
       refresh()
     } finally {
       setResettingId(null)
@@ -615,15 +686,14 @@ export default function RRHHPage() {
   }
 
   async function handleRecreateUser(emp: EmployeeRowWithStatus): Promise<void> {
-    setResetMessage(null)
     setRecreatingId(emp.id)
     try {
       const { error } = await recreateEmployeeUser(emp.id)
       if (error) {
-        setResetMessage(`Error al recrear usuario: ${error}`)
+        showToast(`Error al recrear usuario: ${error}`, 'error')
         return
       }
-      setResetMessage('Acceso recreado. Nueva invitación enviada.')
+      showToast('Acceso recreado. Nueva invitación enviada.', 'success')
       refresh()
     } finally {
       setRecreatingId(null)
@@ -660,18 +730,6 @@ export default function RRHHPage() {
         />
       </div>
 
-      {resetMessage && (
-        <p
-          className="mb-4 text-sm"
-          role="status"
-          style={{
-            color: resetMessage.startsWith('Error') ? '#dc2626' : 'var(--accent)',
-          }}
-        >
-          {resetMessage}
-        </p>
-      )}
-
       {listError && (
         <p className="mb-4 text-sm text-red-600" role="alert">
           {listError}
@@ -692,12 +750,23 @@ export default function RRHHPage() {
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         <ul className="divide-y" style={{ borderColor: 'var(--border)' }}>
+          {!loading && filtered.length === 0 && (
+            <li
+              className="px-4 py-8 text-center text-sm"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {search.trim()
+                ? 'Sin resultados para la búsqueda.'
+                : 'No hay empleados registrados.'}
+            </li>
+          )}
           {filtered.map((emp, i) => (
             <EmployeeRow
               companies={companies}
               emp={emp}
               index={i}
               key={emp.id}
+              onEdit={openEditModal}
               onRecreate={e => void handleRecreateUser(e)}
               onResend={e => void handleResendInvite(e)}
               recreatingId={recreatingId}
@@ -710,7 +779,7 @@ export default function RRHHPage() {
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
-          onClick={() => setShowModal(false)}
+          onClick={closeModal}
           role="dialog"
         >
           <div
@@ -719,9 +788,13 @@ export default function RRHHPage() {
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
-                {showCompanyForm ? 'Agregar Empresa' : 'Agregar Empleado'}
+                {showCompanyForm
+                  ? 'Agregar Empresa'
+                  : editingId
+                    ? 'Editar Empleado'
+                    : 'Agregar Empleado'}
               </h2>
-              <Button onClick={() => setShowModal(false)} variant="icon">
+              <Button onClick={closeModal} variant="icon">
                 ×
               </Button>
             </div>
@@ -740,8 +813,10 @@ export default function RRHHPage() {
               <EmployeeForm
                 companies={companies}
                 error={saveError}
+                fieldErrors={fieldErrors}
                 form={employeeForm}
-                onCancel={() => setShowModal(false)}
+                isEditing={!!editingId}
+                onCancel={closeModal}
                 onChange={patch => setEmployeeForm(f => ({ ...f, ...patch }))}
                 onCompanySelect={handleCompanySelectChange}
                 onSubmit={() => void handleSave()}
