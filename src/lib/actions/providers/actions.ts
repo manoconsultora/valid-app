@@ -32,7 +32,7 @@ export async function getProviderCategories(): Promise<{
   try {
     const supabase = await createServerClient()
     const { data, error } = await supabase
-      .from('provider_categories')
+      .from('categories')
       .select('id, slug, name')
       .order('name')
     if (error) {

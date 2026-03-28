@@ -70,7 +70,19 @@ export interface Session {
   expiresAt: number
 }
 
-/** Empleado RRHH (admin – empleados propios / proveedores). */
+/** Empresa interna del grupo (RRHH). Sin acceso al dashboard — el acceso se gestiona a nivel de empleado. */
+export interface Company {
+  id: string
+  name: string
+  cuit: string
+  categoryId: string
+  email: string
+  phone: string
+  contactName: string
+  contactRole: string
+}
+
+/** Empleado RRHH (admin – empleados propios). */
 export interface Employee {
   id: string
   name: string
@@ -80,4 +92,6 @@ export interface Employee {
   email: string
   phone: string
   status: 'Activo' | 'Inactivo'
+  /** null cuando el empleado no tiene acceso al dashboard */
+  userId: string | null
 }
